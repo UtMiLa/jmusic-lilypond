@@ -1,0 +1,59 @@
+{
+  "name": "jmusic-lilypond",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "rimraf dist && ttsc --build tsconfig.prod.json",
+    "start": "yarn run start:dev",
+    "test": "mocha --config .mocharc.json --watch src/**/*.test.ts",
+    "coverage": "nyc mocha --config .mocharc.json src/**/*.test.ts",
+    "lint": "eslint src/**/*.ts --fix",
+    "start:dev": "nodemon --config .nodemonrc.json src/index.ts",
+    "start:prod": "node dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UtMiLa/jmusic-lilypond.git"
+  },
+  "author": "John Erik Rønne Ekberg",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/UtMiLa/jmusic-lilypond/issues"
+  },
+  "dependencies": {
+    "node": "^15.3.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.14",
+    "@types/mocha": "^8.0.4",
+    "@types/node": "^14.14.10",
+    "@typescript-eslint/eslint-plugin": "^5.40.1",
+    "@typescript-eslint/parser": "^5.40.1",
+    "chai": "^4.2.0",
+    "eslint": "^7.14.0",
+    "husky": "^4.3.0",
+    "lint-staged": "^10.5.2",
+    "mocha": "^10.1.0",
+    "nodemon": "^2.0.6",
+    "nyc": "^15.1.0",
+    "pegjs": "^0.10.0",
+    "rimraf": "^3.0.2",
+    "ts-node": "^9.0.0",
+    "ttypescript": "^1.5.12",
+    "typescript": "^4.1.2",
+    "typescript-transform-paths": "^2.1.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npx lint-staged",
+      "post-commit": "git update-index --again"
+    }
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix"
+    ]
+  },
+  "homepage": "https://github.com/UtMiLa/jmusic-lilypond#readme"
+}
