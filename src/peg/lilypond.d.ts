@@ -1,1 +1,1 @@
-export declare function parse(peg: string): unknown;
+export declare function parse(peg: string, settings?: { startRule: string }): unknown;

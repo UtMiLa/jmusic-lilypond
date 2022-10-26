@@ -12,18 +12,22 @@ variable
 
 */
 {
-	var lastTime = 4;
+
+	const noteModule = require('../../../jmusic-model/src/model/index.ts');	
+
+	var lastTime = noteModule.Time.newSpan(1, 4);
   function theTime(d){
-    //this.lastTime = 4;
    	if (d) { 
-        if (d.dur == "\\brevis") {
-        	lastTime = { num: 2, den: 1 };
+        /*if (d.dur == "\\brevis") {
+        	lastTime = { numerator: 2, denominator: 1, type: 'span' };
         } else {
 	        let dur = d.dur.join("");
-        	lastTime = { num: 1, den: +dur };
-        }
+        	lastTime = { numerator: 1, denominator: +dur, type: 'span' };
+        }*/
+		lastTime = noteModule.Time.fromLilypond(d);
       }
-    return { num: lastTime.num, den: lastTime.den };
+    return lastTime; //{ numerator: lastTime.num, denominator: lastTime.den, type: 'span' };
+	//noteModule.Time.newSpan(1, 4)
   } 	
 
 }
@@ -77,13 +81,19 @@ Music
     "{" __ "<<" __ StaffExpression* ">>" __ "}" /
     variable: VariableRef
 Sequence
-	= "{" __ notes:MusicElement* __ "}" { return {
+	= "{" __ notes:MusicElement* __ "}" { 
+		const res = new noteModule.SimpleSequence('');
+		notes.forEach(note => {
+			res.addElement(note);
+		});
+		return res;
+	/*{
 			t: "Sequence",
 			def: {
 				stem: "dir"
 			},
 			children: notes.reverse() // kommer underligt nok i omvendt rækkefølge
-		};
+		};*/
 	} 
 MusicElement
 	= Note /
@@ -132,7 +142,7 @@ Rest
 		var lastDur = theTime(d);
         var mul;
 		return {
-                    t: "Note",
+                    t: "NoteRest",
 					def: {
 						time: lastDur,
 						noteId: "n" + lastDur.num + "_" + lastDur.den,
@@ -146,21 +156,22 @@ Rest
 Note 
 	= p:Pitch d:Duration? tie:"~"? __ { 
    		var lastDur = theTime(d);
-        if (tie) p.def.tie = true;
-		return {
-                    t: "Note",
-					def: {
-						time: lastDur,
-						noteId: "n" + lastDur.num + "_" + lastDur.den,
-                        dots: d && d.dots ? d.dots.length : undefined,
-                        tuplet: d ? d.mul : undefined
-					},
-					children: [p]
-					}}
+		var note = new noteModule.Note([p], lastDur);
+        if (tie) note.tie = true;
+		return note;
+	}
+		//				time: lastDur,
+		//				noteId: "n" + lastDur.num + "_" + lastDur.den,
+        //                dots: d && d.dots ? d.dots.length : undefined,
+        //                tuplet: d ? d.mul : undefined
+		//			},
+		//
 Chord
 	= "<" n:(Pitch MultiPitch*) ">" d:Duration? tie:"~"? __ { 
 		var lastDur = theTime(d);
-		if (tie) {
+		var pitches = [n[0]].concat(n[1]);
+		
+		/*if (tie) {
 			n[0].tie  = true;
 		}
 		var childItems = [n[0]];
@@ -169,9 +180,10 @@ Chord
 				n[1][i].tie  = true;
 			}
 			childItems.push(n[1][i]); 
-		}
-		return {
-					t: "Note",
+		}*/
+		var note = new noteModule.Note(pitches, noteModule.Time.newSpan(1, 4));
+		return note;  /*{
+					t: "NoteCh",
 					def: {
 						time: lastDur,
 						noteId: "n" + lastDur.num + "_" + lastDur.den,
@@ -180,11 +192,11 @@ Chord
 					},
                     n: n,
 					children: childItems
-					}; }
+					};*/ }
 MultiPitch
 	= _ p:Pitch { return p; }
 Duration
-	= d:([0-9]+ / "\\brevis") dot:Dots? mul:Multiplier? { return { dur: d, dots: dot, mul: mul } }    
+	= d:([0-9]+ / "\\brevis") dot:Dots? mul:Multiplier? { return /*{ dur: d, dots: dot, mul: mul }*/ d + (dot ? dot.join('') : ''); }    
 Dots 
 	= "."+
 Multiplier
@@ -194,28 +206,19 @@ Pitch "pitch"
 	= pit:[a-h] i:Inflection? o:Octave tie:"~"? { 
 				    var alteration = 0;
 					switch (i) {
-                        case "is": alteration = "x"; break;
-                        case "isis": alteration = "xx"; break;
-                        case "es": case "s": alteration = "b"; break;
-                        case "eses": case "ses": alteration = "bb"; break;
+                        case "is": alteration = 1; break;
+                        case "isis": alteration = 2; break;
+                        case "es": case "s": alteration = -1; break;
+                        case "eses": case "ses": alteration = -2; break;
                     }
-                    var octave = -7;
+                    var octave = 3;
                     for (var i = 0; i < o.length; i++) {
                     	switch(o[i]){
-                        	case "'": octave += 7; break;
-                        	case ",": octave -= 7; break;
+                        	case "'": octave ++; break;
+                        	case ",": octave --; break;
                         }
                     }
-					return {
-						t: "Notehead",
-						def: {
-							p: ['c', 'd', 'e', 'f', 'g', 'a', 'b'].indexOf(pit) + octave,
-							a: alteration,
-							forceAcc: false,
-							tie: tie? true : false,
-							tieForced: false
-						}
-					};
+					return new noteModule.Pitch(['c', 'd', 'e', 'f', 'g', 'a', 'b'].indexOf(pit), octave, alteration);
 				}
 Inflection
 	= "s" / "f" / "isis" / "eses" / "is" / "es"

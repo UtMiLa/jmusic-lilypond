@@ -9,6 +9,7 @@
     "test": "mocha --config .mocharc.json --watch src/**/*.test.ts",
     "coverage": "nyc mocha --config .mocharc.json src/**/*.test.ts",
     "lint": "eslint src/**/*.ts --fix",
+    "peg": "npx pegjs --allowed-start-rules MusicElement,File,Pitch ./src/peg/lilypond.pegjs",
     "start:dev": "nodemon --config .nodemonrc.json src/index.ts",
     "start:prod": "node dist/index.js"
   },
