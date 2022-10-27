@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { add, load } from './start';
-import {Note, Pitch, SimpleSequence, Time} from '../../jmusic-model/src/model';
+import {Clef, ClefType, Key, MeterFactory, Note, Pitch, SimpleSequence, Time} from '../../jmusic-model/src/model';
 
 describe('Lilypond import', () => {
 
@@ -59,6 +59,28 @@ describe('Lilypond import', () => {
         expect(res4).to.deep.eq(note4);
 
     });
+
+    it('should parse a clef', () => {
+        const res1 = load("\\clef treble ", {startRule: 'MusicElement'});
+
+        expect(res1).to.deep.eq(new Clef({ clefType: ClefType.G, line: -2 }));
+
+    });
+
+    it('should parse a key', () => {
+        const res1 = load("\\key d \\major ", {startRule: 'MusicElement'});
+
+        expect(res1).to.deep.eq(new Key({accidental: 1, count: 2}));
+
+    });
+
+    it('should parse a meter change', () => {
+        const res1 = load("\\time 3/4 ", {startRule: 'MusicElement'});
+
+        expect(res1).to.deep.eq(MeterFactory.createRegularMeter({ count: 3, value: 4}));
+
+    });
+
 
     it('should parse a sequence', () => {
         const res = load("{c4 d e f}") as SimpleSequence;

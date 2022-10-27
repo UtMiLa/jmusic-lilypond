@@ -122,17 +122,18 @@ Command
 Comment =
 	"%" c:([^\n]*) "\n" { return { "Comment": c.join('') }; }
 ClefDef "command_element_clef"
-	= "\\clef" _ s:String _ { return { clef: s } }
+	= "\\clef" _ s:[a-zA-Z]+ _ { return noteModule.parseLilyClef('\\clef ' + s.join('')) } 
     
 KeyDef "command_event_key"
-	= "\\key" _ s:Note m:Mode _ { return { key: s, mode: m } }
+	= "\\key" _ s:Pitch _ m:Mode _ { return noteModule.parseLilyKey('\\key ' + s.pitchClass.pitchClassName + ' ' + m) }
     
 Mode
 	= "\\major" / "\\minor"
     
 TimeDef "command_element_time"
 	= "\\time" _ s:Integer "/" d:Integer _ { 
-	return {"t":"Meter","def":{"abs":{"num":0,"den":1},"def":{"t":"Regular","num":s,"den":d}}};
+	//return {"t":"Meter","def":{"abs":{"num":0,"den":1},"def":{"t":"Regular","num":s,"den":d}}};
+	return noteModule.parseLilyMeter('\\time ' + s + '/' + d);
 	}
     
 StaffExpression
