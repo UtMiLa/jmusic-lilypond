@@ -12,10 +12,57 @@ variable
 
 */
 {
+	var ClefType = {
+		G: 4,
+		C: 0,
+		F: -4,
+		G8: -3
+	};
 
-	const noteModule = require('../../../jmusic-model/src/model/index.ts');	
+	function parseLilyMeter(ly) {
+		const tokens = ly.split(' ');
+		if (tokens.length !== 2 || !/^\d+\/\d+$/.test(tokens[1])) throw 'Illegal meter change: ' + ly;
 
-	var lastTime = noteModule.Time.newSpan(1, 4);
+		const [count, value] = tokens[1].split('/');
+
+		return { count: +count, value: +value };
+	}
+
+	function parseLilyClef(ly) {
+		ly = ly.replace('\\clef ', '');
+		switch(ly) {
+			case 'G': case 'G2': case 'violin': case 'treble': return { clefType: ClefType.G, line: -2 };
+			case 'tenorG': return { clefType: ClefType.G8, line: -2 };
+			case 'tenor': return { clefType: ClefType.C, line: 2 };
+			case 'F': case 'bass': return { clefType: ClefType.F, line: 2 };
+			case 'C': case 'alto': return { clefType: ClefType.C, line: 0 };
+		}
+		throw 'Illegal clef: ' + ly;
+	}
+
+
+	var lastTime =  { numerator: 1, denominator: 4, type: 'span' };
+
+
+    function timeFromLilypond(input) {
+        const matcher = /(\d+)(\.*)/;
+        const parsed = matcher.exec(input);
+        if (!parsed) throw 'Illegal duration: ' + input;
+        let numerator = 1;
+        let denominator = +parsed[1];
+
+        parsed[2].split('').forEach(char => {
+            if (char === '.') {
+                numerator = numerator * 2 + 1;
+                denominator *= 2;
+            }
+        });
+
+        //console.log(parsed, numerator, denominator);
+        return { numerator: numerator, denominator: denominator, type: 'span' };		
+    }
+
+
   function theTime(d){
    	if (d) { 
         /*if (d.dur == "\\brevis") {
@@ -24,10 +71,10 @@ variable
 	        let dur = d.dur.join("");
         	lastTime = { numerator: 1, denominator: +dur, type: 'span' };
         }*/
-		lastTime = noteModule.Time.fromLilypond(d);
+		lastTime = timeFromLilypond(d);
       }
     return lastTime; //{ numerator: lastTime.num, denominator: lastTime.den, type: 'span' };
-	//noteModule.Time.newSpan(1, 4)
+	
   } 	
 
 }
@@ -46,8 +93,13 @@ Expression
   music:Music { return {mus: music}; } /
   notes:MusicElement+ { return {n: notes}; } /
   comment:Comment { return {t:"Comment", def: comment}; }  /
+  variableDef:VariableDef
   s:[ \t\n\r]+ { return undefined; } 
-  
+Identifier
+  = String
+  / [a-zA-Z]+
+VariableDef
+  = v:Identifier _ '=' _ Sequence { return v }
 TransposeFunction
     = "\\transpose" _ Pitch _ Pitch _ Music _ /
     "\\modalTranspose" _ Pitch _ Pitch _ Music Music _
@@ -82,18 +134,7 @@ Music
     variable: VariableRef
 Sequence
 	= "{" __ notes:MusicElement* __ "}" { 
-		const res = new noteModule.SimpleSequence('');
-		notes.forEach(note => {
-			res.addElement(note);
-		});
-		return res;
-	/*{
-			t: "Sequence",
-			def: {
-				stem: "dir"
-			},
-			children: notes.reverse() // kommer underligt nok i omvendt rækkefølge
-		};*/
+		return { type: 'SimpleSequence', data: notes };
 	} 
 MusicElement
 	= Note /
@@ -122,10 +163,10 @@ Command
 Comment =
 	"%" c:([^\n]*) "\n" { return { "Comment": c.join('') }; }
 ClefDef "command_element_clef"
-	= "\\clef" _ s:[a-zA-Z]+ _ { return noteModule.parseLilyClef('\\clef ' + s.join('')) } 
+	= "\\clef" _ s:[a-zA-Z]+ _ { return { type: 'Clef', data: parseLilyClef('\\clef ' + s.join('')) }; } 
     
 KeyDef "command_event_key"
-	= "\\key" _ s:Pitch _ m:Mode _ { return noteModule.parseLilyKey('\\key ' + s.pitchClass.pitchClassName + ' ' + m) }
+	= "\\key" _ s:Pitch _ m:Mode _ { return { type: 'Key', data: { pitch: s.data, mode: m } }; }
     
 Mode
 	= "\\major" / "\\minor"
@@ -133,7 +174,7 @@ Mode
 TimeDef "command_element_time"
 	= "\\time" _ s:Integer "/" d:Integer _ { 
 	//return {"t":"Meter","def":{"abs":{"num":0,"den":1},"def":{"t":"Regular","num":s,"den":d}}};
-	return noteModule.parseLilyMeter('\\time ' + s + '/' + d);
+	return { type: 'RegularMeter', data: parseLilyMeter('\\time ' + s + '/' + d) };
 	}
     
 StaffExpression
@@ -157,9 +198,9 @@ Rest
 Note 
 	= p:Pitch d:Duration? tie:"~"? __ { 
    		var lastDur = theTime(d);
-		var note = new noteModule.Note([p], lastDur);
-        if (tie) note.tie = true;
-		return note;
+		var res = { type: 'Note', data: { dur: lastDur, pitches: [p.data] } };
+		if (tie) res.data.tie = true;
+		return res;
 	}
 		//				time: lastDur,
 		//				noteId: "n" + lastDur.num + "_" + lastDur.den,
@@ -182,18 +223,12 @@ Chord
 			}
 			childItems.push(n[1][i]); 
 		}*/
-		var note = new noteModule.Note(pitches, noteModule.Time.newSpan(1, 4));
-		return note;  /*{
-					t: "NoteCh",
-					def: {
-						time: lastDur,
-						noteId: "n" + lastDur.num + "_" + lastDur.den,
-                        dots: d && d.dots ? d.dots.length : undefined,
-                        tuplet: d ? d.mul : undefined
-					},
-                    n: n,
-					children: childItems
-					};*/ }
+
+		var res = { type: 'Note', data: { dur: lastDur, pitches: pitches.map(p =>p.data) } };
+		if (tie) res.data.tie = true;
+		return res;		
+		
+	}
 MultiPitch
 	= _ p:Pitch { return p; }
 Duration
@@ -219,7 +254,10 @@ Pitch "pitch"
                         	case ",": octave --; break;
                         }
                     }
-					return new noteModule.Pitch(['c', 'd', 'e', 'f', 'g', 'a', 'b'].indexOf(pit), octave, alteration);
+					return {
+						type: 'Pitch',
+						data: [['c', 'd', 'e', 'f', 'g', 'a', 'b'].indexOf(pit), octave, alteration]
+					};
 				}
 Inflection
 	= "s" / "f" / "isis" / "eses" / "is" / "es"

@@ -8,3 +8,7 @@ export function load(ly: string, settings?: { startRule: string }): unknown {
     return parse(ly, settings);
 }
 
+		/*const res = new noteModule.SimpleSequence('');
+		notes.forEach(note => {
+			res.addElement(note);
+		});*/
