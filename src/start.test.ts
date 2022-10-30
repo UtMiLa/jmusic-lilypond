@@ -102,24 +102,26 @@ describe('Lilypond import', () => {
 
 
 
-    xit('should parse a score', () => {
+    it('should parse a score', () => {
 
-        const score = `\\score {
-            <<
+        const score = `\\score 
+            {
               
-                \\new Staff { <<
+                \\new Staff <<
                   
                   \\clef treble
         c4 d e
-          >> } % End Staff = RH
+          >> % End Staff = RH
 
-          } `;
+                  }  `;
 
 
         const res = load(score, {startRule: 'File'});
 
         expect(res).to.deep.eq(
-            {}
+            [{
+                t: 'Score'
+            }]
         );
 
 

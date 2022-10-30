@@ -96,10 +96,10 @@ Expression
   variableDef:VariableDef
   s:[ \t\n\r]+ { return undefined; } 
 Identifier
-  = String
-  / [a-zA-Z]+
+	= String /
+    id:[a-zA-Z]+ { return id.join(''); }
 VariableDef
-  = v:Identifier _ '=' _ Sequence { return v }
+  = v:Identifier _ '=' _ SequenceDelimited { return v }
 TransposeFunction
     = "\\transpose" _ Pitch _ Pitch _ Music _ /
     "\\modalTranspose" _ Pitch _ Pitch _ Music Music _
@@ -121,20 +121,29 @@ Score
 		return res;
 	}
 ScoreMusic
-	= "{" __ t:ScoreThings* "}" { return t; }
+	= "{" __ t:ScoreThings* "}" __ { return t; }
 ScoreThings
-	= "\\new" _ "Staff" _ m:Music __ { return {
-		t: "Staff",
-		def: {},
-		children: [m]
-	}; }
+	= StaffExpression /
+    PianoStaffExpression
+StaffExpression
+	= "\\new" _ "Staff" __ m:Music __ { return m }
+    / "\\new" _ "Staff" __ "<<" _ m:StaffThings* __ ">>" __ { return m }
+StaffThings
+	= "\\new" _ "Voice" __ "=" __ Identifier __ "<<" __ m:Sequence __ ">>" _ { return m }
+    / m:MusicElement { return m }
+PianoStaffExpression
+    = "\\new" _ "PianoStaff" __ "<<" _ StaffExpression+ __ ">>" _
 Music
-	= Sequence /
+	= SequenceDelimited /
     "{" __ "<<" __ StaffExpression* ">>" __ "}" /
-    variable: VariableRef
+    "{" __ "<<" __ PianoStaffExpression* ">>" __ "}"
 Sequence
-	= "{" __ notes:MusicElement* __ "}" { 
+	= __ notes:MusicElement* __ { 
 		return { type: 'SimpleSequence', data: notes };
+	} 
+SequenceDelimited
+	= "{" __ seq:Sequence __ "}" { 
+		return seq;
 	} 
 MusicElement
 	= Note /
@@ -146,11 +155,12 @@ MusicElement
     KeyDef /
     TimeDef /
     Command /
-    Sequence /
-    Music
+    SequenceDelimited /
+    Music /
+    variable: VariableRef
 VariableRef
 	= "\\" name:[a-zA-Z]+ __ { return { t: "Variable", def: {name: name.join('')}}; }
-Command
+Command "notecommand"
 	= "\\numericTimeSignature" _ /
     "[" __ /
     "]" __ /
@@ -163,7 +173,7 @@ Command
 Comment =
 	"%" c:([^\n]*) "\n" { return { "Comment": c.join('') }; }
 ClefDef "command_element_clef"
-	= "\\clef" _ s:[a-zA-Z]+ _ { return { type: 'Clef', data: parseLilyClef('\\clef ' + s.join('')) }; } 
+	= "\\clef" _ s:Identifier _ { return { type: 'Clef', data: parseLilyClef('\\clef ' + s) }; } 
     
 KeyDef "command_event_key"
 	= "\\key" _ s:Pitch _ m:Mode _ { return { type: 'Key', data: { pitch: s.data, mode: m } }; }
@@ -177,8 +187,6 @@ TimeDef "command_element_time"
 	return { type: 'RegularMeter', data: parseLilyMeter('\\time ' + s + '/' + d) };
 	}
     
-StaffExpression
-	= "\\new" _ "Staff" __ m:Music __ { return m }     
 Rest
 	= [rs] o:Octave d:Duration? __ { 
 		var lastDur = theTime(d);
@@ -297,4 +305,5 @@ __ "optional_whitespace"
 
 WhitespaceItem
 	= [ \t\n\r]+
+    / Comment
     
