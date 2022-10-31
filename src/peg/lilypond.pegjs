@@ -108,31 +108,26 @@ RepeatFunction
 Score
 	= "\\score" _ m:ScoreMusic { 
 		var res = {
-			t: "Score",
-			def: {
-				title: "t",
-				composer: "c",
-				author: "a",
-				subTitle: "s",
-				metadata: {}
-			},
-			children: m
+			type: "Score",
+			data: {
+            	staves: m
+			}
 		};
 		return res;
 	}
 ScoreMusic
 	= "{" __ t:ScoreThings* "}" __ { return t; }
 ScoreThings
-	= StaffExpression /
-    PianoStaffExpression
+	= s:StaffExpression  { return s; } /
+    p:PianoStaffExpression { return p; }
 StaffExpression
-	= "\\new" _ "Staff" __ m:Music __ { return m }
-    / "\\new" _ "Staff" __ "<<" _ m:StaffThings* __ ">>" __ { return m }
+	= "\\new" _ "Staff" __ m:Music __ { return { type: "Staff", data: m }; }
+    / "\\new" _ "Staff" __ "<<" _ m:StaffThings* __ ">>" __ { return { type: "Staff", data: m }; }
 StaffThings
 	= "\\new" _ "Voice" __ "=" __ Identifier __ "<<" __ m:Sequence __ ">>" _ { return m }
     / m:MusicElement { return m }
 PianoStaffExpression
-    = "\\new" _ "PianoStaff" __ "<<" _ StaffExpression+ __ ">>" _
+    = "\\new" _ "PianoStaff" __ "<<" _ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
 Music
 	= SequenceDelimited /
     "{" __ "<<" __ StaffExpression* ">>" __ "}" /

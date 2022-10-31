@@ -116,27 +116,37 @@ describe('Lilypond import', () => {
                   }  `;
 
 
-        const res = load(score, {startRule: 'File'});
+        const res = load(score, {startRule: 'File'}) as any[];
 
-        expect(res).to.deep.eq(
-            [{
-                t: 'Score'
-            }]
-        );
+        expect(res).to.have.length(1);
 
+        const sc = res[0];
+        expect(sc.type).to.eq('Score');
 
+        const sts = sc.data.staves;
+        expect(sts).to.have.length(1);
+        
+        const st = sts[0];
+        expect(st.type).to.eq('Staff');
+        expect(st.data).to.have.length(4);
 
-
-
-
-
-
-
-
-
-
-
-
+        expect(st.data[1]).to.deep.eq({
+            "type": "Note",
+            "data": {
+               "dur": {
+                  "numerator": 1,
+                  "denominator": 4,
+                  "type": "span"
+               },
+               "pitches": [
+                  [
+                     0,
+                     3,
+                     0
+                  ]
+               ]
+            }
+         });
 
 
         const score1 = `\\score { % Start score
