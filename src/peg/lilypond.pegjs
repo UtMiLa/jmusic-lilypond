@@ -82,7 +82,7 @@ variable
 
 
 File
-	= ex:Expression * { return ex; }
+	= ex:Expression * { return ex.filter(x => x); }
     
 Expression
   = version:Version /
@@ -90,16 +90,16 @@ Expression
   relative: Relative /
   score:Score /
   things: ScoreThings /
-  music:Music { return {mus: music}; } /
-  notes:MusicElement+ { return {n: notes}; } /
-  comment:Comment { return {t:"Comment", def: comment}; }  /
-  variableDef:VariableDef
+  music: Music { return {mus: music}; } /
+  notes: MusicElement+ { return {n: notes}; } /
+  comment:Comment { return { type:"Comment", data: comment}; }  /
+  variableDef:VariableDef { return variableDef; } /
   s:[ \t\n\r]+ { return undefined; } 
 Identifier
 	= String /
     id:[a-zA-Z]+ { return id.join(''); }
 VariableDef
-  = v:Identifier _ '=' _ SequenceDelimited { return v }
+  = v:Identifier _ '=' _ s:SequenceDelimited { return { type: 'VarDef', data: { identifier: v, value: s } }}
 TransposeFunction
     = "\\transpose" _ Pitch _ Pitch _ Music _ /
     "\\modalTranspose" _ Pitch _ Pitch _ Music Music _
@@ -117,6 +117,7 @@ Score
 	}
 ScoreMusic
 	= "{" __ t:ScoreThings* "}" __ { return t; }
+    / "{" __ "<<" __ t:ScoreThings* __ ">>" __ "}" __ { return t; }
 ScoreThings
 	= s:StaffExpression  { return s; } /
     p:PianoStaffExpression { return p; }
@@ -124,7 +125,7 @@ StaffExpression
 	= "\\new" _ "Staff" __ m:Music __ { return { type: "Staff", data: m }; }
     / "\\new" _ "Staff" __ "<<" _ m:StaffThings* __ ">>" __ { return { type: "Staff", data: m }; }
 StaffThings
-	= "\\new" _ "Voice" __ "=" __ Identifier __ "<<" __ m:Sequence __ ">>" _ { return m }
+	= "\\new" _ "Voice" __ "=" __ Identifier __ "<<" __ m:Sequence __ ">>" _ { return { type: 'Voice', data: { content: m } } }
     / m:MusicElement { return m }
 PianoStaffExpression
     = "\\new" _ "PianoStaff" __ "<<" _ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
@@ -154,7 +155,7 @@ MusicElement
     Music /
     variable: VariableRef
 VariableRef
-	= "\\" name:[a-zA-Z]+ __ { return { t: "Variable", def: {name: name.join('')}}; }
+	= "\\" name:[a-zA-Z]+ __ { return { type: "Variable", data: {name: name.join('')}}; }
 Command "notecommand"
 	= "\\numericTimeSignature" _ /
     "[" __ /
@@ -199,7 +200,7 @@ Rest
 				}
 		}
 Note 
-	= p:Pitch d:Duration? tie:"~"? __ { 
+	= p:Pitch d:Duration? tie:"~"? _ { 
    		var lastDur = theTime(d);
 		var res = { type: 'Note', data: { dur: lastDur, pitches: [p.data] } };
 		if (tie) res.data.tie = true;
@@ -212,7 +213,7 @@ Note
 		//			},
 		//
 Chord
-	= "<" n:(Pitch MultiPitch*) ">" d:Duration? tie:"~"? __ { 
+	= "<" n:(Pitch MultiPitch*) ">" d:Duration? tie:"~"? _ { 
 		var lastDur = theTime(d);
 		var pitches = [n[0]].concat(n[1]);
 		
@@ -293,10 +294,10 @@ StringEscape
 	= "\\"
 
 _ "whitespace"
-  = s:(WhitespaceItem+) { return " " }
+  = s:(WhitespaceItem+) { return undefined; }
   
 __ "optional_whitespace"
-	= s:(WhitespaceItem*) { return {"WS": s}; }
+	= s:(WhitespaceItem*) { return undefined; }
 
 WhitespaceItem
 	= [ \t\n\r]+

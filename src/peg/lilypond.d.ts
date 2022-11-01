@@ -1,1 +1,2 @@
-export declare function parse(peg: string, settings?: { startRule: string }): unknown;
+import { PitchDefLy, MusicElementDefLy, FileItemLy } from './../intermediate-ly';
+export declare function parse(peg: string, settings?: { startRule: string }): FileItemLy[] | MusicElementDefLy | PitchDefLy;
