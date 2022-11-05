@@ -42,7 +42,39 @@ describe('Lilypond import', () => {
 
         expect(res1).to.deep.eq( {type: 'Note', data: { pitches: [[0, 3, 0]], dur: Time.newSpan(1, 4) }});
 
-        const res2 = load("<d, fis, a,>2 ", {startRule: 'MusicElement'});
+        const res2 = load("<d, fis, a,>128", {startRule: 'MusicElement'});
+
+        expect(res2).to.deep.eq({type: 'Note', data: { 
+            pitches: [
+            [1, 2, 0],
+            [3, 2, 1],
+            [5, 2, 0]
+        ], dur: Time.newSpan(1, 128) }});
+
+        const res2a = load("<d,>16 ", {startRule: 'MusicElement'});
+
+        expect(toNote(res2a)).to.deep.eq(new Note([
+            new Pitch(1, 2, 0),
+        ], Time.newSpan(1, 16)));
+
+        const res3 = load("e2. ", {startRule: 'MusicElement'});
+        const note3 = new Note([new Pitch(2, 3, 0)], Time.newSpan(3, 4));
+        expect(toNote(res3)).to.deep.eq(note3);
+
+        const res4 = load("fisis1~ ", {startRule: 'MusicElement'});
+        const note4 = new Note([new Pitch(3, 3, 2)], Time.newSpan(1, 1));
+        note4.tie = true;
+        expect(toNote(res4)).to.deep.eq(note4);
+
+    });
+
+    it('should parse a rest', () => {
+
+        const res1 = load("r4", {startRule: 'MusicElement'});
+
+        expect(res1).to.deep.eq( {type: 'Note', data: { pitches: [], dur: Time.newSpan(1, 4) }});
+
+        /*const res2 = load("<d, fis, a,>2 ", {startRule: 'MusicElement'});
 
         expect(res2).to.deep.eq({type: 'Note', data: { 
             pitches: [
@@ -65,7 +97,7 @@ describe('Lilypond import', () => {
         const note4 = new Note([new Pitch(3, 3, 2)], Time.newSpan(1, 1));
         note4.tie = true;
         expect(toNote(res4)).to.deep.eq(note4);
-
+*/
     });
 
     it('should parse a clef', () => {
@@ -101,8 +133,20 @@ describe('Lilypond import', () => {
 
     });
 
-    xit('should parse a note, key, clef, meter without trailing space');
-    xit('should parse a variable definition, even beginning with a note name');
+    it('should parse a note, key, clef, meter without trailing space', () => {
+        const res = load("{c4 d e f}") as any;
+
+        expect(res.type).to.eq('SimpleSequence');
+        expect(res.data[3].type).to.eq('Note');
+        expect(res.data[3].data.pitches).to.deep.eq([[3, 3, 0]]);
+    });
+
+    it('should parse a variable definition, even beginning with a note name', () => {
+        const res = load("candle = {c4 d e}", {startRule: 'File'}) as any;
+
+        expect(res).to.have.length(1);
+        expect(res[0].type).to.eq('VarDef');
+    });
 
     it('should parse a score', () => {
 

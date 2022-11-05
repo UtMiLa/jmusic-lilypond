@@ -189,23 +189,19 @@ TimeDef "command_element_time"
 	}
     
 Rest
-	= [rs] o:Octave d:Duration? __ { 
+	= [rs] o:Octave d:Duration? ![a-zA-Z] __ { 
 		var lastDur = theTime(d);
         var mul;
 		return {
-                    t: "NoteRest",
-					def: {
-						time: lastDur,
-						noteId: "n" + lastDur.num + "_" + lastDur.den,
-                        dots: d && d.dots ? d.dots.length : undefined,
-                        rest: true,
-                        tuplet: d ? d.mul : undefined
-					},
-					children: []
-				}
+                  type: "Note",
+                  data: {
+                     dur: lastDur,
+                     pitches: []
+                  }
+               };
 		}
 Note 
-	= p:Pitch d:Duration? tie:"~"? __ { 
+	= p:Pitch d:Duration? tie:"~"? ![a-zA-Z0-9] __ { 
    		var lastDur = theTime(d);
 		var res = { type: 'Note', data: { dur: lastDur, pitches: [p.data] } };
 		if (tie) res.data.tie = true;
@@ -241,7 +237,9 @@ Chord
 MultiPitch
 	= _ p:Pitch { return p; }
 Duration
-	= d:([0-9]+ / "\\brevis") dot:Dots? mul:Multiplier? { return /*{ dur: d, dots: dot, mul: mul }*/ d + (dot ? dot.join('') : ''); }    
+	= d:(DurationNumber / "\\brevis") dot:Dots? mul:Multiplier? { return d + (dot ? dot.join('') : ''); }   
+DurationNumber
+	= d:[0-9]+ ![0-9] { return d.join('') }
 Dots 
 	= "."+
 Multiplier

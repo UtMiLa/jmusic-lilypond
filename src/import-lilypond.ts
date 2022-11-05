@@ -1,6 +1,6 @@
 import { Alteration, BaseSequence, Clef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef } from '../../jmusic-model/src/model';
 import { StateChange } from '../../jmusic-model/src/model/states/state';
-import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy } from './intermediate-ly';
+import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy, SimpleSequenceDefLy } from './intermediate-ly';
 import {parse} from './peg/lilypond';
 
 export function load(ly: string, settings?: { startRule: string }): FileItemLy[] | MusicElementDefLy | PitchDefLy {
@@ -13,10 +13,11 @@ export function load(ly: string, settings?: { startRule: string }): FileItemLy[]
 Todo:
 
 \partial 8 (upbeat)
-g16 should be 1/16, not 1/1
-sequence in sequence {c d e { f g }}
-rests
-don't parse variable definitions as note variable (global => g lobal), and don't require space after note
+ok: g16 should be 1/16, not 1/1
+ok: sequence in sequence {c d e { f g }}
+timeline in voice should be separate from following music (why?)
+ok: rests
+ok: don't parse variable definitions as note variable (global => g lobal), and don't require space after note
 	between note and variable must be whitespace
 	whitespace not needed before variable (in beginning of document)
 	whitespace not needed after note (before sequence terminator)
@@ -86,6 +87,15 @@ class LilypondConverter {
 					
 				}
 					break;
+
+
+				case 'SimpleSequence': {
+					
+					const internalSequence = this.convertSimpleSequence(seqElm as SimpleSequenceDefLy); 
+					
+					internalSequence.elements.forEach(elm => res.addElement(elm));
+				}
+					break;					
 				default: 
 					console.error('Illegal element: ', seqElm);
 					throw 'Illegal element';
@@ -170,7 +180,7 @@ export function lilypondToJMusic(ly: string): ScoreDef {
 		staves: []	
 	};
 
-	const stuff = load(ly, {startRule: 'File'});
+	const stuff = load(ly + '\n', {startRule: 'File'});
 	const fi = stuff as FileItemLy[];
 	if (fi.length) {
 		fi.forEach(element => {

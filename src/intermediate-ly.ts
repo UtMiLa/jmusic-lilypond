@@ -48,7 +48,7 @@ export interface SimpleSequenceDefLy {
 
 export type SequenceDefLy = SimpleSequenceDefLy;
 
-export type MusicElementDefLy = NoteDefLy | ClefDefLy | KeyDefLy | MeterDefLy | VariableDefLy;
+export type MusicElementDefLy = NoteDefLy | ClefDefLy | KeyDefLy | MeterDefLy | VariableDefLy | SimpleSequenceDefLy;
 
 export interface NoteDefLy {
     type: 'Note';
