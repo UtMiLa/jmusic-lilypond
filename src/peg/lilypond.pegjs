@@ -19,11 +19,15 @@ variable
 		G8: -3
 	};
 
-	function parseLilyMeter(ly) {
+	function parseLilyMeter(ly, pm) {
 		const tokens = ly.split(' ');
 		if (tokens.length !== 2 || !/^\d+\/\d+$/.test(tokens[1])) throw 'Illegal meter change: ' + ly;
 
 		const [count, value] = tokens[1].split('/');
+        
+        if (pm) {
+        	return { count: +count, value: +value, upbeat: timeFromLilypond(pm) };
+        }
 
 		return { count: +count, value: +value };
 	}
@@ -177,10 +181,11 @@ KeyDef "command_event_key"
 Mode
 	= "\\major" / "\\minor"
     
+Partial
+	= '\\partial' _ pd:Duration _ 
 TimeDef "command_element_time"
-	= "\\time" _ s:Integer "/" d:Integer _ { 
-	//return {"t":"Meter","def":{"abs":{"num":0,"den":1},"def":{"t":"Regular","num":s,"den":d}}};
-	return { type: 'RegularMeter', data: parseLilyMeter('\\time ' + s + '/' + d) };
+	= "\\time" _ s:Integer "/" d:Integer _ pm:Partial? {
+	return { type: 'RegularMeter', data: parseLilyMeter('\\time ' + s + '/' + d, pm) };
 	}
     
 Rest
@@ -200,7 +205,7 @@ Rest
 				}
 		}
 Note 
-	= p:Pitch d:Duration? tie:"~"? _ { 
+	= p:Pitch d:Duration? tie:"~"? __ { 
    		var lastDur = theTime(d);
 		var res = { type: 'Note', data: { dur: lastDur, pitches: [p.data] } };
 		if (tie) res.data.tie = true;
@@ -213,7 +218,7 @@ Note
 		//			},
 		//
 Chord
-	= "<" n:(Pitch MultiPitch*) ">" d:Duration? tie:"~"? _ { 
+	= "<" n:(Pitch MultiPitch*) ">" d:Duration? tie:"~"? __ { 
 		var lastDur = theTime(d);
 		var pitches = [n[0]].concat(n[1]);
 		

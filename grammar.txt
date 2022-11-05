@@ -1,0 +1,997 @@
+1 lilypond: /* empty */
+    2         | lilypond toplevel_expression
+    3         | lilypond assignment
+    4         | lilypond error
+    5         | lilypond "\invalid"
+
+    6 toplevel_expression: lilypond_header
+    7                    | book_block
+    8                    | bookpart_block
+    9                    | score_block
+   10                    | composite_music
+   11                    | full_markup
+   12                    | full_markup_list
+   13                    | output_def
+
+   14 embedded_scm: SCM_TOKEN
+   15             | SCM_IDENTIFIER
+
+   16 lilypond_header_body: /* empty */
+   17                     | lilypond_header_body assignment
+
+   18 lilypond_header: "\header" '{' lilypond_header_body '}'
+
+   19 assignment_id: STRING
+   20              | LYRICS_STRING
+
+   21 assignment: assignment_id '=' identifier_init
+   22           | assignment_id property_path '=' identifier_init
+   23           | embedded_scm
+
+   24 identifier_init: score_block
+   25                | book_block
+   26                | bookpart_block
+   27                | output_def
+   28                | context_def_spec_block
+   29                | music
+   30                | post_event
+   31                | number_expression
+   32                | string
+   33                | embedded_scm
+   34                | full_markup
+   35                | DIGIT
+   36                | context_modification
+
+   37 context_def_spec_block: "\context" '{' context_def_spec_body '}'
+
+   38 context_def_spec_body: /* empty */
+   39                      | CONTEXT_DEF_IDENTIFIER
+   40                      | context_def_spec_body 
+                               "\grobdescriptions" 
+                               embedded_scm 
+   41                      | context_def_spec_body context_mod
+   42                      | context_def_spec_body context_modification
+
+   43 book_block: "\book" '{' book_body '}'
+
+   44 book_body: /* empty */
+   45          | BOOK_IDENTIFIER
+   46          | book_body paper_block
+   47          | book_body bookpart_block
+   48          | book_body score_block
+   49          | book_body composite_music
+   50          | book_body full_markup
+   51          | book_body full_markup_list
+   52          | book_body lilypond_header
+   53          | book_body error
+
+   54 bookpart_block: "\bookpart" '{' bookpart_body '}'
+
+   55 bookpart_body: /* empty */
+   56              | BOOK_IDENTIFIER
+   57              | bookpart_body paper_block
+   58              | bookpart_body score_block
+   59              | bookpart_body composite_music
+   60              | bookpart_body full_markup
+   61              | bookpart_body full_markup_list
+   62              | bookpart_body lilypond_header
+   63              | bookpart_body error
+
+   64 score_block: "\score" '{' score_body '}'
+
+   65 score_body: music
+   66           | SCORE_IDENTIFIER
+   67           | score_body lilypond_header
+   68           | score_body output_def
+   69           | score_body error
+
+   70 paper_block: output_def
+
+   71 output_def: output_def_body '}'
+
+   72 output_def_head: "\paper"
+   73                | "\midi"
+   74                | "\layout"
+
+   75 output_def_head_with_mode_switch: output_def_head
+
+   76 output_def_body: output_def_head_with_mode_switch '{'
+   77                | output_def_head_with_mode_switch 
+                         '{' 
+                         OUTPUT_DEF_IDENTIFIER 
+   78                | output_def_body assignment
+   79                | output_def_body context_def_spec_block
+   80                | output_def_body error
+
+   81 tempo_event: "\tempo" steno_duration '=' tempo_range
+   82            | "\tempo" string steno_duration '=' tempo_range
+   83            | "\tempo" full_markup steno_duration '=' tempo_range
+   84            | "\tempo" string
+   85            | "\tempo" full_markup
+
+   86 music_list: /* empty */
+   87           | music_list music
+   88           | music_list embedded_scm
+   89           | music_list error
+
+   90 music: simple_music
+   91      | composite_music
+
+   92 alternative_music: /* empty */
+   93                  | "\alternative" '{' music_list '}'
+
+   94 repeated_music: "\repeat" 
+                        simple_string 
+                        unsigned_number 
+                        music 
+                        alternative_music 
+
+   95 sequential_music: "\sequential" '{' music_list '}'
+   96                 | '{' music_list '}'
+
+   97 simultaneous_music: "\simultaneous" '{' music_list '}'
+   98                   | "<<" music_list ">>"
+
+   99 simple_music: event_chord
+  100             | MUSIC_IDENTIFIER
+  101             | music_property_def
+  102             | context_change
+
+  104 context_modification: "\with" $ '{' context_mod_list '}'
+  105                     | "\with" CONTEXT_MOD_IDENTIFIER
+  106                     | CONTEXT_MOD_IDENTIFIER
+
+  107 optional_context_mod: /* empty */
+  108                     | context_modification
+
+  109 context_mod_list: /* empty */
+  110                 | context_mod_list context_mod
+  111                 | context_mod_list CONTEXT_MOD_IDENTIFIER
+
+  112 composite_music: prefix_composite_music
+  113                | grouped_music_list
+
+  114 grouped_music_list: simultaneous_music
+  115                   | sequential_music
+
+  116 function_scm_argument: embedded_scm
+  117                      | simple_string
+
+  118 function_arglist_music_last: EXPECT_MUSIC function_arglist music
+
+  119 function_arglist_nonmusic_last: EXPECT_MARKUP 
+                                        function_arglist 
+                                        full_markup 
+  120                               | EXPECT_MARKUP 
+                                        function_arglist 
+                                        simple_string 
+  121                               | EXPECT_SCM 
+                                        function_arglist 
+                                        function_scm_argument 
+
+  122 function_arglist_nonmusic: EXPECT_NO_MORE_ARGS
+  123                          | EXPECT_MARKUP 
+                                   function_arglist_nonmusic 
+                                   full_markup 
+  124                          | EXPECT_MARKUP 
+                                   function_arglist_nonmusic 
+                                   simple_string 
+  125                          | EXPECT_SCM 
+                                   function_arglist_nonmusic 
+                                   function_scm_argument 
+
+  126 function_arglist: EXPECT_NO_MORE_ARGS
+  127                 | function_arglist_music_last
+  128                 | function_arglist_nonmusic_last
+
+  129 generic_prefix_music_scm: MUSIC_FUNCTION function_arglist
+
+  130 optional_id: /* empty */
+  131            | '=' simple_string
+
+  132 prefix_composite_music: generic_prefix_music_scm
+  133                       | "\context" 
+                                simple_string 
+                                optional_id 
+                                optional_context_mod 
+                                music 
+  134                       | "\new" 
+                                simple_string 
+                                optional_id 
+                                optional_context_mod 
+                                music 
+  135                       | "\times" fraction music
+  136                       | repeated_music
+  137                       | "\transpose" 
+                                pitch_also_in_chords 
+                                pitch_also_in_chords 
+                                music 
+  138                       | mode_changing_head grouped_music_list
+  139                       | mode_changing_head_with_context 
+                                optional_context_mod 
+                                grouped_music_list 
+  140                       | relative_music
+  141                       | re_rhythmed_music
+
+  142 mode_changing_head: "\notemode"
+  143                   | "\drummode"
+  144                   | "\figuremode"
+  145                   | "\chordmode"
+  146                   | "\lyricmode"
+
+  147 mode_changing_head_with_context: "\drums"
+  148                                | "\figures"
+  149                                | "\chords"
+  150                                | "\lyrics"
+
+  151 relative_music: "\relative" absolute_pitch music
+  152               | "\relative" composite_music
+
+  154 new_lyrics: "\addlyrics" $ grouped_music_list
+
+  156 new_lyrics: "\addlyrics" $ MUSIC_IDENTIFIER
+
+  158 new_lyrics: new_lyrics "\addlyrics" $ grouped_music_list
+
+  160 new_lyrics: new_lyrics "\addlyrics" $ MUSIC_IDENTIFIER
+
+  161 re_rhythmed_music: grouped_music_list new_lyrics
+  162                  | MUSIC_IDENTIFIER new_lyrics
+
+  164 re_rhythmed_music: "\lyricsto" simple_string $ music
+
+  165 context_change: "\change" STRING '=' STRING
+
+  166 property_path_revved: embedded_scm
+  167                     | property_path_revved embedded_scm
+
+  168 property_path: property_path_revved
+
+  169 property_operation: STRING '=' scalar
+  170                   | "\unset" simple_string
+  171                   | "\override" simple_string property_path '=' scalar
+  172                   | "\revert" simple_string embedded_scm
+
+  173 context_def_mod: "\consists"
+  174                | "\remove"
+  175                | "\accepts"
+  176                | "\defaultchild"
+  177                | "\denies"
+  178                | "\alias"
+  179                | "\type"
+  180                | "\description"
+  181                | "\name"
+
+  182 context_mod: property_operation
+  183            | context_def_mod STRING
+  184            | context_def_mod embedded_scm
+
+  185 context_prop_spec: simple_string
+  186                  | simple_string '.' simple_string
+
+  187 simple_music_property_def: "\override" 
+                                   context_prop_spec 
+                                   property_path 
+                                   '=' 
+                                   scalar 
+  188                          | "\revert" context_prop_spec embedded_scm
+  189                          | "\set" context_prop_spec '=' scalar
+  190                          | "\unset" context_prop_spec
+
+  191 music_property_def: simple_music_property_def
+  192                   | "\once" simple_music_property_def
+
+  193 string: STRING
+  194       | STRING_IDENTIFIER
+  195       | string '+' string
+
+  196 simple_string: STRING
+  197              | LYRICS_STRING
+  198              | STRING_IDENTIFIER
+
+  199 scalar: string
+  200       | LYRICS_STRING
+  201       | bare_number
+  202       | embedded_scm
+  203       | full_markup
+  204       | DIGIT
+
+  205 event_chord: simple_chord_elements post_events
+  206            | CHORD_REPETITION optional_notemode_duration post_events
+  207            | MULTI_MEASURE_REST optional_notemode_duration post_events
+  208            | command_element
+  209            | note_chord_element
+
+  210 note_chord_element: chord_body optional_notemode_duration post_events
+
+  211 chord_body: "<" chord_body_elements ">"
+
+  212 chord_body_elements: /* empty */
+  213                    | chord_body_elements chord_body_element
+
+  214 chord_body_element: pitch 
+                            exclamations 
+                            questions 
+                            octave_check 
+                            post_events 
+  215                   | DRUM_PITCH post_events
+  216                   | music_function_chord_body
+
+  217 music_function_identifier_musicless_prefix: MUSIC_FUNCTION
+
+  218 music_function_chord_body: music_function_identifier_musicless_prefix 
+                                   EXPECT_MUSIC 
+                                   function_arglist_nonmusic 
+                                   chord_body_element 
+  219                          | music_function_identifier_musicless_prefix 
+                                   function_arglist_nonmusic 
+
+  220 music_function_event: music_function_identifier_musicless_prefix 
+                              EXPECT_MUSIC 
+                              function_arglist_nonmusic 
+                              post_event 
+  221                     | music_function_identifier_musicless_prefix 
+                              function_arglist_nonmusic 
+
+  222 command_element: command_event
+  223                | "\skip" duration_length
+  224                | "\["
+  225                | "\]"
+  226                | "\"
+  227                | '|'
+  228                | "\partial" duration_length
+  229                | "\time" fraction
+  230                | "\mark" scalar
+
+  231 command_event: "\~"
+  232              | "\mark" "\default"
+  233              | tempo_event
+  234              | "\key" "\default"
+  235              | "\key" NOTENAME_PITCH SCM_IDENTIFIER
+
+  236 post_events: /* empty */
+  237            | post_events post_event
+
+  238 post_event: direction_less_event
+  239           | script_dir music_function_event
+  240           | "--"
+  241           | "__"
+  242           | script_dir direction_reqd_event
+  243           | script_dir direction_less_event
+  244           | string_number_event
+
+  245 string_number_event: E_UNSIGNED
+
+  246 direction_less_char: '['
+  247                    | ']'
+  248                    | '~'
+  249                    | '('
+  250                    | ')'
+  251                    | "\!"
+  252                    | "\("
+  253                    | "\)"
+  254                    | "\>"
+  255                    | "\<"
+
+  256 direction_less_event: direction_less_char
+  257                     | EVENT_IDENTIFIER
+  258                     | tremolo_type
+
+  259 direction_reqd_event: gen_text_def
+  260                     | script_abbreviation
+
+  261 octave_check: /* empty */
+  262             | '='
+  263             | '=' sub_quotes
+  264             | '=' sup_quotes
+
+  265 sup_quotes: '\''
+  266           | sup_quotes '\''
+
+  267 sub_quotes: ','
+  268           | sub_quotes ','
+
+  269 steno_pitch: NOTENAME_PITCH
+  270            | NOTENAME_PITCH sup_quotes
+  271            | NOTENAME_PITCH sub_quotes
+
+  272 steno_tonic_pitch: TONICNAME_PITCH
+  273                  | TONICNAME_PITCH sup_quotes
+  274                  | TONICNAME_PITCH sub_quotes
+
+  275 pitch: steno_pitch
+
+  276 pitch_also_in_chords: pitch
+  277                     | steno_tonic_pitch
+
+  278 gen_text_def: full_markup
+  279             | string
+  280             | DIGIT
+
+  281 script_abbreviation: '^'
+  282                    | '+'
+  283                    | '-'
+  284                    | '|'
+  285                    | ">"
+  286                    | '.'
+  287                    | '_'
+
+  288 script_dir: '_'
+  289           | '^'
+  290           | '-'
+
+  291 absolute_pitch: steno_pitch
+
+  292 duration_length: multiplied_duration
+
+  293 optional_notemode_duration: /* empty */
+  294                           | multiplied_duration
+
+  295 steno_duration: bare_unsigned dots
+  296               | DURATION_IDENTIFIER dots
+
+  297 multiplied_duration: steno_duration
+  298                    | multiplied_duration '*' bare_unsigned
+  299                    | multiplied_duration '*' FRACTION
+
+  300 fraction: FRACTION
+  301         | UNSIGNED '/' UNSIGNED
+
+  302 dots: /* empty */
+  303     | dots '.'
+
+  304 tremolo_type: ':'
+  305             | ':' bare_unsigned
+
+  306 bass_number: DIGIT
+  307            | UNSIGNED
+  308            | STRING
+  309            | full_markup
+
+  310 figured_bass_alteration: '-'
+  311                        | '+'
+  312                        | '!'
+
+  313 bass_figure: "_"
+  314            | bass_number
+  315            | bass_figure ']'
+  316            | bass_figure figured_bass_alteration
+  317            | bass_figure figured_bass_modification
+
+  318 figured_bass_modification: "\+"
+  319                          | "\!"
+  320                          | '/'
+  321                          | "\"
+
+  322 br_bass_figure: bass_figure
+  323               | '[' bass_figure
+
+  324 figure_list: /* empty */
+  325            | figure_list br_bass_figure
+
+  326 figure_spec: FIGURE_OPEN figure_list FIGURE_CLOSE
+
+  327 optional_rest: /* empty */
+  328              | "\rest"
+
+  329 simple_element: pitch 
+                        exclamations 
+                        questions 
+                        octave_check 
+                        optional_notemode_duration 
+                        optional_rest 
+  330               | DRUM_PITCH optional_notemode_duration
+  331               | RESTNAME optional_notemode_duration
+  332               | lyric_element optional_notemode_duration
+
+  333 simple_chord_elements: simple_element
+  334                      | new_chord
+  335                      | figure_spec optional_notemode_duration
+
+  336 lyric_element: lyric_markup
+  337              | LYRICS_STRING
+
+  338 new_chord: steno_tonic_pitch optional_notemode_duration
+  339          | steno_tonic_pitch 
+                   optional_notemode_duration 
+                   chord_separator 
+                   chord_items 
+
+  340 chord_items: /* empty */
+  341            | chord_items chord_item
+
+  342 chord_separator: ":"
+  343                | "^"
+  344                | "/" steno_tonic_pitch
+  345                | "/+" steno_tonic_pitch
+
+  346 chord_item: chord_separator
+  347           | step_numbers
+  348           | CHORD_MODIFIER
+
+  349 step_numbers: step_number
+  350             | step_numbers '.' step_number
+
+  351 step_number: bare_unsigned
+  352            | bare_unsigned '+'
+  353            | bare_unsigned "-"
+
+  354 tempo_range: bare_unsigned
+  355            | bare_unsigned '~' bare_unsigned
+
+  356 number_expression: number_expression '+' number_term
+  357                  | number_expression '-' number_term
+  358                  | number_term
+
+  359 number_term: number_factor
+  360            | number_factor '*' number_factor
+  361            | number_factor '/' number_factor
+
+  362 number_factor: '-' number_factor
+  363              | bare_number
+
+  364 bare_number: UNSIGNED
+  365            | REAL
+  366            | NUMBER_IDENTIFIER
+  367            | REAL NUMBER_IDENTIFIER
+  368            | UNSIGNED NUMBER_IDENTIFIER
+
+  369 bare_unsigned: UNSIGNED
+  370              | DIGIT
+
+  371 unsigned_number: bare_unsigned
+  372                | NUMBER_IDENTIFIER
+
+  373 exclamations: /* empty */
+  374             | exclamations '!'
+
+  375 questions: /* empty */
+  376          | questions '?'
+
+  377 lyric_markup: LYRIC_MARKUP_IDENTIFIER
+
+  379 lyric_markup: LYRIC_MARKUP $ markup_top
+
+  381 full_markup_list: "\markuplines" $ markup_list
+
+  382 full_markup: MARKUP_IDENTIFIER
+
+  384 full_markup: "\markup" $ markup_top
+
+  385 markup_top: markup_list
+  386           | markup_head_1_list simple_markup
+  387           | simple_markup
+
+  388 markup_list: markup_composed_list
+  389            | markup_braced_list
+  390            | markup_command_list
+
+  391 markup_composed_list: markup_head_1_list markup_braced_list
+
+  392 markup_braced_list: '{' markup_braced_list_body '}'
+
+  393 markup_braced_list_body: /* empty */
+  394                        | markup_braced_list_body markup
+  395                        | markup_braced_list_body markup_list
+
+  396 markup_command_list: MARKUP_LIST_FUNCTION markup_command_list_arguments
+
+  397 markup_command_basic_arguments: EXPECT_MARKUP_LIST 
+                                        markup_command_list_arguments 
+                                        markup_list 
+  398                               | EXPECT_SCM 
+                                        markup_command_list_arguments 
+                                        embedded_scm 
+  399                               | EXPECT_NO_MORE_ARGS
+
+  400 markup_command_list_arguments: markup_command_basic_arguments
+  401                              | EXPECT_MARKUP 
+                                       markup_command_list_arguments 
+                                       markup 
+
+  402 markup_head_1_item: MARKUP_FUNCTION 
+                            EXPECT_MARKUP 
+                            markup_command_list_arguments 
+
+  403 markup_head_1_list: markup_head_1_item
+  404                   | markup_head_1_list markup_head_1_item
+
+  405 simple_markup: STRING
+  406              | MARKUP_IDENTIFIER
+  407              | LYRIC_MARKUP_IDENTIFIER
+  408              | STRING_IDENTIFIER
+
+  410 simple_markup: "\score" $0 '{' score_body '}'
+  411              | MARKUP_FUNCTION markup_command_basic_arguments
+
+  412 markup: markup_head_1_list simple_markup
+  413       | simple_markup
+
+
+Terminals, with rules where they appear
+
+
+
+"-" (319) 353
+"--" (340) 240
+"/" (320) 344
+"/+" (316) 345
+":" (318) 342
+"<" (321) 211
+"<<" (323) 98
+">" (322) 211 285
+">>" (324) 98
+"\!" (329) 251 319
+"\" (325) 226 321
+"\(" (331) 252
+"\)" (328) 253
+"\+" (334) 318
+"\<" (333) 255
+"\>" (326) 254
+"\[" (330) 224
+"\]" (332) 225
+"\accepts" (261) 175
+"\addlyrics" (259) 154 156 158 160
+"\alias" (262) 178
+"\alternative" (263) 93
+"\book" (264) 43
+"\bookpart" (265) 54
+"\C[haracter]" (327)
+"\change" (266) 165
+"\chordmode" (267) 145
+"\chords" (268) 149
+"\consists" (269) 173
+"\context" (270) 37 133
+"\default" (271) 232 234
+"\defaultchild" (272) 176
+"\denies" (273) 177
+"\description" (274) 180
+"\drummode" (275) 143
+"\drums" (276) 147
+"\figuremode" (277) 144
+"\figures" (278) 148
+"\grobdescriptions" (279) 40
+"\header" (280) 18
+"\invalid" (281) 5
+"\key" (282) 234 235
+"\layout" (283) 74
+"\lyricmode" (284) 146
+"\lyrics" (285) 150
+"\lyricsto" (286) 164
+"\mark" (287) 230 232
+"\markup" (288) 384
+"\markuplines" (289) 381
+"\midi" (290) 73
+"\name" (291) 181
+"\new" (315) 134
+"\notemode" (292) 142
+"\octave" (293)
+"\once" (294) 192
+"\override" (295) 171 187
+"\paper" (296) 72
+"\partial" (297) 228
+"\relative" (298) 151 152
+"\remove" (299) 174
+"\repeat" (300) 94
+"\rest" (301) 328
+"\revert" (302) 172 188
+"\score" (303) 64 410
+"\sequential" (304) 95
+"\set" (305) 189
+"\simultaneous" (306) 97
+"\skip" (307) 223
+"\tempo" (308) 81 82 83 84 85
+"\time" (314) 229
+"\times" (309) 135
+"\transpose" (310) 137
+"\type" (311) 179
+"\unset" (312) 170 190
+"\with" (313) 104 105
+"\~" (335) 231
+"^" (317) 343
+"_" (339) 313
+"__" (336) 241
+$end (0) 0
+'!' (33) 312 374
+'(' (40) 249
+')' (41) 250
+'*' (42) 298 299 360
+'+' (43) 195 282 311 352 356
+',' (44) 267 268
+'-' (45) 283 290 310 357 362
+'.' (46) 186 286 303 350
+'/' (47) 301 320 361
+':' (58) 304 305
+'=' (61) 21 22 81 82 83 131 165 169 171 187 189 262 263 264
+'?' (63) 376
+'[' (91) 246 323
+'\'' (39) 265 266
+']' (93) 247 315
+'^' (94) 281 289
+'_' (95) 287 288
+'{' (123) 18 37 43 54 64 76 77 93 95 96 97 104 392 410
+'|' (124) 227 284
+'}' (125) 18 37 43 54 64 71 93 95 96 97 104 392 410
+'~' (126) 248 355
+BOOK_IDENTIFIER (352) 45 56
+CHORD_MODIFIER (354) 348
+CHORD_REPETITION (355) 206
+CHORDMODIFIER_PITCH (353)
+CHORDMODIFIERS (341)
+CONTEXT_DEF_IDENTIFIER (356) 39
+CONTEXT_MOD_IDENTIFIER (357) 105 106 111
+DIGIT (344) 35 204 280 306 370
+DRUM_PITCH (358) 215 330
+DURATION_IDENTIFIER (359) 296
+E_UNSIGNED (345) 245
+error (256) 4 53 63 69 80 89
+EVENT_IDENTIFIER (360) 257
+EXPECT_MARKUP (347) 119 120 123 124 401 402
+EXPECT_MARKUP_LIST (350) 397
+EXPECT_MUSIC (348) 118 218 220
+EXPECT_NO_MORE_ARGS (351) 122 126 399
+EXPECT_SCM (349) 121 125 398
+FIGURE_CLOSE (337) 326
+FIGURE_OPEN (338) 326
+FRACTION (361) 299 300
+LYRIC_MARKUP (342) 379
+LYRIC_MARKUP_IDENTIFIER (363) 377 407
+LYRICS_STRING (362) 20 197 200 337
+MARKUP_FUNCTION (364) 402 411
+MARKUP_IDENTIFIER (366) 382 406
+MARKUP_LIST_FUNCTION (365) 396
+MULTI_MEASURE_REST (343) 207
+MUSIC_FUNCTION (367) 129 217
+MUSIC_IDENTIFIER (368) 100 156 160 162
+NOTENAME_PITCH (369) 235 269 270 271
+NUMBER_IDENTIFIER (370) 366 367 368 372
+OUTPUT_DEF_IDENTIFIER (371) 77
+PREC_BOT (260)
+PREC_TOP (258)
+REAL (372) 365 367
+RESTNAME (373) 331
+SCM_IDENTIFIER (374) 15 235
+SCM_TOKEN (375) 14
+SCORE_IDENTIFIER (376) 66
+STRING (377) 19 165 169 183 193 196 308 405
+STRING_IDENTIFIER (378) 194 198 408
+TONICNAME_PITCH (379) 272 273 274
+UNARY_MINUS (380)
+UNSIGNED (346) 301 307 364 368 369
+
+Nonterminals, with rules where they appear
+
+
+$@1 (178)
+    on left: 103, on right: 104
+$@10 (290)
+    on left: 409, on right: 410
+$@2 (195)
+    on left: 153, on right: 154
+$@3 (196)
+    on left: 155, on right: 156
+$@4 (197)
+    on left: 157, on right: 158
+$@5 (198)
+    on left: 159, on right: 160
+$@6 (200)
+    on left: 163, on right: 164
+$@7 (274)
+    on left: 378, on right: 379
+$@8 (276)
+    on left: 380, on right: 381
+$@9 (278)
+    on left: 383, on right: 384
+absolute_pitch (239)
+    on left: 291, on right: 151
+alternative_music (172)
+    on left: 92 93, on right: 94
+assignment (154)
+    on left: 21 22 23, on right: 3 17 78
+assignment_id (153)
+    on left: 19 20, on right: 21 22
+bare_number (268)
+    on left: 364 365 366 367 368, on right: 201 363
+bass_number (247)
+    on left: 306 307 308 309, on right: 314
+book_block (158)
+    on left: 43, on right: 7 25
+bookpart_block (160)
+    on left: 54, on right: 8 26 47
+br_bass_figure (251)
+    on left: 322 323, on right: 325
+chord_body (215)
+    on left: 211, on right: 210
+chord_body_element (217)
+    on left: 214 215 216, on right: 213 218
+chord_body_elements (216)
+    on left: 212 213, on right: 211 213
+chord_item (261)
+    on left: 346 347 348, on right: 341
+chord_items (259)
+    on left: 340 341, on right: 339 341
+chord_separator (260)
+    on left: 342 343 344 345, on right: 339 346
+command_event (222)
+    on left: 231 232 233 234 235, on right: 222
+composite_music (181)
+    on left: 112 113, on right: 10 49 59 91 152
+context_change (201)
+    on left: 165, on right: 102
+context_def_spec_block (156)
+    on left: 37, on right: 28 79
+context_mod (206)
+    on left: 182 183 184, on right: 41 110
+context_mod_list (180)
+    on left: 109 110 111, on right: 104 110 111
+context_modification (177)
+    on left: 104 105 106, on right: 36 42 108
+context_prop_spec (207)
+    on left: 185 186, on right: 187 188 189 190
+direction_less_event (227)
+    on left: 256 257 258, on right: 238 243
+direction_reqd_event (228)
+    on left: 259 260, on right: 242
+dots (245)
+    on left: 302 303, on right: 295 296 303
+duration_length (240)
+    on left: 292, on right: 223 228
+event_chord (213)
+    on left: 205 206 207 208 209, on right: 99
+exclamations (271)
+    on left: 373 374, on right: 214 329 374
+figure_list (252)
+    on left: 324 325, on right: 325 326
+figure_spec (253)
+    on left: 326, on right: 335
+figured_bass_alteration (248)
+    on left: 310 311 312, on right: 316
+figured_bass_modification (250)
+    on left: 318 319 320 321, on right: 317
+fraction (244)
+    on left: 300 301, on right: 135 229
+full_markup_list (275)
+    on left: 381, on right: 12 51 61
+function_arglist_music_last (184)
+    on left: 118, on right: 127
+function_arglist_nonmusic_last (185)
+    on left: 119 120 121, on right: 128
+function_scm_argument (183)
+    on left: 116 117, on right: 121 125
+gen_text_def (236)
+    on left: 278 279 280, on right: 259
+generic_prefix_music_scm (188)
+    on left: 129, on right: 132
+lilypond (148)
+    on left: 1 2 3 4 5, on right: 0 2 3 4 5
+lilypond_header (152)
+    on left: 18, on right: 6 52 62 67
+lilypond_header_body (151)
+    on left: 16 17, on right: 17 18
+lyric_element (257)
+    on left: 336 337, on right: 332
+lyric_markup (273)
+    on left: 377 379, on right: 336
+markup (291)
+    on left: 412 413, on right: 394 401
+markup_braced_list (282)
+    on left: 392, on right: 389 391
+markup_braced_list_body (283)
+    on left: 393 394 395, on right: 392 394 395
+markup_command_list (284)
+    on left: 396, on right: 390
+markup_composed_list (281)
+    on left: 391, on right: 388
+markup_head_1_item (287)
+    on left: 402, on right: 403 404
+markup_head_1_list (288)
+    on left: 403 404, on right: 386 391 404 412
+markup_list (280)
+    on left: 388 389 390, on right: 381 385 395 397
+markup_top (279)
+    on left: 385 386 387, on right: 379 384
+mode_changing_head (191)
+    on left: 142 143 144 145 146, on right: 138
+multiplied_duration (243)
+    on left: 297 298 299, on right: 292 294 298 299
+music_function_chord_body (219)
+    on left: 218 219, on right: 216
+music_function_event (220)
+    on left: 220 221, on right: 239
+music_list (170)
+    on left: 86 87 88 89, on right: 87 88 89 93 95 96 97 98
+music_property_def (209)
+    on left: 191 192, on right: 101
+new_chord (258)
+    on left: 338 339, on right: 334
+new_lyrics (194)
+    on left: 154 156 158 160, on right: 158 160 161 162
+note_chord_element (214)
+    on left: 210, on right: 209
+number_expression (265)
+    on left: 356 357 358, on right: 31 356 357
+number_factor (267)
+    on left: 362 363, on right: 359 360 361 362
+number_term (266)
+    on left: 359 360 361, on right: 356 357 358
+octave_check (229)
+    on left: 261 262 263 264, on right: 214 329
+optional_context_mod (179)
+    on left: 107 108, on right: 133 134 139
+optional_id (189)
+    on left: 130 131, on right: 133 134
+optional_rest (254)
+    on left: 327 328, on right: 329
+output_def (165)
+    on left: 71, on right: 13 27 68 70
+output_def_body (168)
+    on left: 76 77 78 79 80, on right: 71 78 79 80
+output_def_head (166)
+    on left: 72 73 74, on right: 75
+output_def_head_with_mode_switch (167)
+    on left: 75, on right: 76 77
+paper_block (164)
+    on left: 70, on right: 46 57
+pitch (234)
+    on left: 275, on right: 214 276 329
+pitch_also_in_chords (235)
+    on left: 276 277, on right: 137
+post_events (223)
+    on left: 236 237, on right: 205 206 207 210 214 215 237
+property_operation (204)
+    on left: 169 170 171 172, on right: 182
+property_path (203)
+    on left: 168, on right: 22 171 187
+property_path_revved (202)
+    on left: 166 167, on right: 167 168
+questions (272)
+    on left: 375 376, on right: 214 329 376
+re_rhythmed_music (199)
+    on left: 161 162 164, on right: 141
+relative_music (193)
+    on left: 151 152, on right: 140
+repeated_music (173)
+    on left: 94, on right: 136
+score_block (162)
+    on left: 64, on right: 9 24 48 58
+score_body (163)
+    on left: 65 66 67 68 69, on right: 64 67 68 69 410
+script_dir (238)
+    on left: 288 289 290, on right: 239 242 243
+sequential_music (174)
+    on left: 95 96, on right: 115
+simple_chord_elements (256)
+    on left: 333 334 335, on right: 205
+simple_element (255)
+    on left: 329 330 331 332, on right: 333
+simple_music (176)
+    on left: 99 100 101 102, on right: 90
+simultaneous_music (175)
+    on left: 97 98, on right: 114
+steno_duration (242)
+    on left: 295 296, on right: 81 82 83 297
+steno_pitch (232)
+    on left: 269 270 271, on right: 275 291
+step_number (263)
+    on left: 351 352 353, on right: 349 350
+step_numbers (262)
+    on left: 349 350, on right: 347 350
+string (210)
+    on left: 193 194 195, on right: 32 82 84 195 199 279
+string_number_event (225)
+    on left: 245, on right: 244
+sub_quotes (231)
+    on left: 267 268, on right: 263 268 271 274
+sup_quotes (230)
+    on left: 265 266, on right: 264 266 270 273
+tempo_event (169)
+    on left: 81 82 83 84 85, on right: 233
+tempo_range (264)
+    on left: 354 355, on right: 81 82 83
+toplevel_expression (149)
+    on left: 6 7 8 9 10 11 12 13, on right: 2
+tremolo_type (246)
+    on left: 304 305, on right: 258
+unsigned_number (270)
+    on left: 371 372, on right: 94
+

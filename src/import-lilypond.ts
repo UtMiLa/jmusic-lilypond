@@ -1,4 +1,4 @@
-import { Alteration, BaseSequence, Clef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef } from '../../jmusic-model/src/model';
+import { Alteration, BaseSequence, Clef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef } from '../../jmusic-model/src/model';
 import { StateChange } from '../../jmusic-model/src/model/states/state';
 import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy } from './intermediate-ly';
 import {parse} from './peg/lilypond';
@@ -6,6 +6,23 @@ import {parse} from './peg/lilypond';
 export function load(ly: string, settings?: { startRule: string }): FileItemLy[] | MusicElementDefLy | PitchDefLy {
     return parse(ly, settings);
 }
+
+
+
+/* 
+Todo:
+
+\partial 8 (upbeat)
+g16 should be 1/16, not 1/1
+sequence in sequence {c d e { f g }}
+rests
+don't parse variable definitions as note variable (global => g lobal), and don't require space after note
+	between note and variable must be whitespace
+	whitespace not needed before variable (in beginning of document)
+	whitespace not needed after note (before sequence terminator)
+use \voiceOne etc to set note direction
+ok: accept simultaneous key/clef/meter changes, if they are identical
+*/
 
 class LilypondConverter {
 	constructor(private score: ScoreDef, private variables: VarDefLy[]) {}
@@ -84,19 +101,22 @@ class LilypondConverter {
 		return resolved;
 	}
 
-	convertVoice(voiceIn: VoiceDefLy, initialSequence?: ISequence): VoiceDef {
+	convertVoice(voiceIn: VoiceDefLy, voiceNo: number, initialSequence?: ISequence): VoiceDef {
 		if (voiceIn.data.content.type === 'SimpleSequence') {
 			if (initialSequence) {
 				return {
-					content: new CompositeSequence(initialSequence, this.convertSimpleSequence(voiceIn.data.content))					 
+					content: new CompositeSequence(initialSequence, this.convertSimpleSequence(voiceIn.data.content)),
+					noteDirection: voiceNo % 2 ? NoteDirection.Up : NoteDirection.Down
 				};
 			}
 			return {
-				content: this.convertSimpleSequence(voiceIn.data.content)
+				content: this.convertSimpleSequence(voiceIn.data.content),
+				noteDirection: voiceNo % 2 ? NoteDirection.Up : NoteDirection.Down
 			};
 		}
 		return {
-			content: new SimpleSequence("c'4 d'4 e'4 f'4")
+			content: new SimpleSequence("c'4 d'4 e'4 f'4"),
+			noteDirection: voiceNo % 2 ? NoteDirection.Up : NoteDirection.Down
 		};
 	}
 
@@ -111,9 +131,9 @@ class LilypondConverter {
 			if (staffThing.type === 'Voice') {
 				voiceNo++;
 				if (voiceNo > voices.length) {
-					voices.push(this.convertVoice(staffThing as VoiceDefLy));
+					voices.push(this.convertVoice(staffThing as VoiceDefLy, voiceNo));
 				} else {
-					voices[0] = this.convertVoice(staffThing as VoiceDefLy, initialSequence);
+					voices[0] = this.convertVoice(staffThing as VoiceDefLy, voiceNo, initialSequence);
 				}
 			} else if (voiceNo === 0) {
 				switch (staffThing.type) {
