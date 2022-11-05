@@ -248,7 +248,7 @@ Multiplier
 	= "*" num:Integer "/" den:Integer { return {num:num, den:den}; }
 	/ "*" num:Integer { return {num:num, den:1}; }
 Pitch "pitch"
-	= pit:[a-h] i:Inflection? o:Octave tie:"~"? { 
+	= pit:[a-h] i:Inflection? o:Octave tie:"~"? ![a-zA-Z] { 
 				    var alteration = 0;
 					switch (i) {
                         case "is": alteration = 1; break;
@@ -265,7 +265,7 @@ Pitch "pitch"
                     }
 					return {
 						type: 'Pitch',
-						data: [['c', 'd', 'e', 'f', 'g', 'a', 'b'].indexOf(pit), octave, alteration]
+						data: [['c', 'd', 'e', 'f', 'g', 'a', 'b'].indexOf(pit.replace('h', 'b')), octave, alteration]
 					};
 				}
 Inflection
