@@ -1,7 +1,7 @@
 import { FileItemLy, ScoreDefLy } from './intermediate-ly';
 import { expect } from 'chai';
 import { load } from './import-lilypond';
-import {Clef, ClefType, Key, MeterFactory, Note, Pitch, SimpleSequence, Time} from '../../jmusic-model/src/model';
+import {Clef, ClefType, Key, MeterFactory, Note, Pitch, SimpleSequence, Time} from 'jmusic-model/src/model';
 
 describe('Lilypond import', () => {
 
@@ -219,4 +219,98 @@ describe('Lilypond import', () => {
 
 
     });    
+
+    it('should parse a score with staves and voices', () => {
+
+        const score1 = `\\score { % Start score
+            <<
+              \\new PianoStaff <<  % Start pianostaff
+                \\new Staff <<  % Start Staff = RH
+                  \\global
+                  \\clef "treble"
+        
+      \\new Voice = "MusicA" << \\Timeline \\voiceOne \\MusicA >> % End Voice = "MusicA"
+      \\new Voice = "MusicB" << \\Timeline \\voiceTwo \\MusicB >> % End Voice = "MusicB"
+          >>  % End Staff = RH
+          \\new Staff <<  % Start Staff = LH
+            \\global
+            \\clef "bass"
+        
+      \\new Voice = "MusicC" << \\Timeline \\voiceOne \\MusicC >> % End Voice = "MusicC"
+      \\new Voice = "MusicD" << \\Timeline \\voiceTwo \\MusicD >> % End Voice = "MusicD"
+                >>  % End Staff = LH
+              >>  % End pianostaff
+            >>
+          }`;
+
+
+
+        const res = load(score1, {startRule: 'File'}) as any[];
+
+        expect(res).to.have.length(1);
+
+        const sc = res[0];
+        expect(sc.type).to.eq('Score');
+
+        /*const sts = sc.data.staves;
+        expect(sts).to.have.length(2);
+        
+        const st = sts[0];
+        expect(st.type).to.eq('Staff');
+        expect(st.data).to.have.length(4);
+
+        /*expect(st.data[1]).to.deep.eq({
+            "type": "Note",
+            "data": {
+               "dur": {
+                  "numerator": 1,
+                  "denominator": 4,
+                  "type": "span"
+               },
+               "pitches": [
+                  [
+                     0,
+                     3,
+                     0
+                  ]
+               ]
+            }
+         });
+         
+         
+         
+         
+         
+// Simple Arithmetics Grammar
+// ==========================
+//
+// Accepts expressions like "2 * (3 + 4)" and computes their value.
+
+File
+  = Statement*
+  
+Statement
+  = Note
+  / Assignment
+
+Expression
+  = "{" Note* "}"
+  
+Identifier
+  = [a-zA-Z]+
+
+Assignment
+  = i:Identifier _ "=" _ e:Expression { return { type: 'assignment', 'var': i, ex: e }; }
+
+Note
+  = n:[a-g] ![a-zA-Z] _ { return {type: 'note', value: n}; }
+
+_ "whitespace"
+  = [ \t\n\r]*         
+         
+         */
+
+
+    });       
+
 });
