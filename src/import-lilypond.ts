@@ -16,6 +16,7 @@ Todo:
 ok: g16 should be 1/16, not 1/1
 ok: sequence in sequence {c d e { f g }}
 timeline in voice should be separate from following music (why?)
+variables in quotes
 ok: rests
 ok: don't parse variable definitions as note variable (global => g lobal), and don't require space after note
 	between note and variable must be whitespace
