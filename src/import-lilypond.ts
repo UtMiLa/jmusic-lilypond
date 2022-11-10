@@ -1,5 +1,5 @@
-import { Alteration, BaseSequence, Clef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef } from 'jmusic-model/src/model';
-import { StateChange } from 'jmusic-model/src/model/states/state';
+import { Alteration, BaseSequence, Clef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef } from 'jmusic-model/model';
+import { StateChange } from 'jmusic-model/model/states/state';
 import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy, SimpleSequenceDefLy } from './intermediate-ly';
 import {parse} from './peg/lilypond';
 

@@ -1,7 +1,7 @@
 import { FileItemLy, ScoreDefLy } from './intermediate-ly';
 import { expect } from 'chai';
 import { load } from './import-lilypond';
-import {Clef, ClefType, Key, MeterFactory, Note, Pitch, SimpleSequence, Time} from 'jmusic-model/src/model';
+import {Clef, ClefType, Key, MeterFactory, Note, Pitch, SimpleSequence, Time} from 'jmusic-model/model';
 
 describe('Lilypond import', () => {
 

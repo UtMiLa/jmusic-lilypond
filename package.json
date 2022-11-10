@@ -23,7 +23,8 @@
     "url": "https://github.com/UtMiLa/jmusic-lilypond/issues"
   },
   "dependencies": {
-    "node": "^15.3.0"
+    "node": "^15.3.0",
+    "jmusic-model": "file:../jmusic-model/dist"
   },
   "devDependencies": {
     "@types/chai": "^4.2.14",
