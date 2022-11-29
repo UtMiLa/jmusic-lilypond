@@ -1,4 +1,4 @@
-import { ClefDef, RegularMeterDef, TimeSpan } from "../../jmusic-model/src/model";
+import { ClefDef, RegularMeterDef, TimeSpan } from "jmusic-model/model";
 
 export interface ScoreDefLy {
     type: 'Score',
