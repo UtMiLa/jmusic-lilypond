@@ -24,6 +24,35 @@ ok: don't parse variable definitions as note variable (global => g lobal), and d
 	whitespace not needed after note (before sequence terminator)
 use \voiceOne etc to set note direction
 ok: accept simultaneous key/clef/meter changes, if they are identical
+
+
+
+r1*7/4  r1*7/4
+basOstinatTo = \basOstinatEt
+QuiTollisOstinatEt = << {<g d'>2 <f d'>
+ \< 
+ \!
+ 
+ a,4.^\markup{\natural} a,2
+ 
+ 
+sopranGlorytxt = { \lyricmode {
+    Glo -- ry to the Lord,
+    glo -- ry to the Lord,
+	
+	
+sopranToGlory = { \repeat unfold 11 \fullRest }	
+\relative c'{ 
+
+\new ChoirStaff <<
+
+\new Staff \with { 
+	instrumentName = "Sopran solo" 
+	shortInstrumentName = \markup {
+      \center-column { "S"
+        \line { "solo" }
+      }
+    }
 */
 
 class LilypondConverter {

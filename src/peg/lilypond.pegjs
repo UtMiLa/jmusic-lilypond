@@ -91,6 +91,7 @@ File
 Expression
   = version:Version /
   include:Include /
+  header: Header /
   relative: Relative /
   score:Score /
   things: ScoreThings /
@@ -99,11 +100,17 @@ Expression
   comment:Comment { return { type:"Comment", data: comment}; }  /
   variableDef:VariableDef { return variableDef; } /
   s:[ \t\n\r]+ { return undefined; } 
+Header
+    = "\\header" _ "{" _ hd:HeaderDeclaration* "}"
+HeaderDeclaration
+	= v: Identifier _ "=" _ s: String _
 Identifier
 	= String /
     id:[a-zA-Z]+ { return id.join(''); }
 VariableDef
-  = v:Identifier _ '=' _ s:SequenceDelimited { return { type: 'VarDef', data: { identifier: v, value: s } }}
+  = v:Identifier _ '=' _ "{" _ LyricMode _ "}"
+  / v:Identifier _ '=' _ s:SequenceDelimited { return { type: 'VarDef', data: { identifier: v, value: s } }}
+  / v:Identifier _ '=' _ "\\" v2:Identifier { return { type: 'VarDef', data: { identifier: v, variable: v2 } }}
 TransposeFunction
     = "\\transpose" _ Pitch _ Pitch _ Music _ /
     "\\modalTranspose" _ Pitch _ Pitch _ Music Music _
@@ -140,11 +147,19 @@ Music
 Sequence
 	= __ notes:MusicElement* __ { 
 		return { type: 'SimpleSequence', data: notes };
-	} 
+	}
 SequenceDelimited
 	= "{" __ seq:Sequence __ "}" { 
 		return seq;
-	} 
+	}
+    
+LyricMode
+	= "\\lyricmode" _ "{" _ LyricSyllable* "}"
+LyricSyllable
+	= [a-zA-Z\.,?!]+ _
+    / "--" _
+    / "__" _
+    / "_" _
 MusicElement
 	= Note /
     Rest /
@@ -189,7 +204,7 @@ TimeDef "command_element_time"
 	}
     
 Rest
-	= [rs] o:Octave d:Duration? ![a-zA-Z] __ { 
+	= [rsR] o:Octave d:Duration? ![a-zA-Z] __ { 
 		var lastDur = theTime(d);
         var mul;
 		return {
