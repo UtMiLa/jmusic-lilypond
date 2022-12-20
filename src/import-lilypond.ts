@@ -25,7 +25,8 @@ ok: don't parse variable definitions as note variable (global => g lobal), and d
 use \voiceOne etc to set note direction
 ok: accept simultaneous key/clef/meter changes, if they are identical
 
-
+\time #'(4 3) 7/8
+f']~
 
 r1*7/4  r1*7/4
 basOstinatTo = \basOstinatEt

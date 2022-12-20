@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "node": "^15.3.0",
-    "jmusic-model": "file:../jmusic-model/src"
+    "jmusic-model": "file:../jmusic-model/dist"
   },
   "devDependencies": {
     "@types/chai": "^4.2.14",

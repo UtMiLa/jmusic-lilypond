@@ -102,20 +102,26 @@ Expression
   s:[ \t\n\r]+ { return undefined; } 
 Header
     = "\\header" _ "{" _ hd:HeaderDeclaration* "}"
+    / "\\paper" _ "{" __ ([a-z-]+ __ "=" __ [0-9]+ __)* "}"
 HeaderDeclaration
 	= v: Identifier _ "=" _ s: String _
 Identifier
 	= String /
     id:[a-zA-Z]+ { return id.join(''); }
 VariableDef
-  = v:Identifier _ '=' _ "{" _ LyricMode _ "}"
+  = v:Identifier __ '=' __ "{" __ LyricMode __ "}"
   / v:Identifier _ '=' _ s:SequenceDelimited { return { type: 'VarDef', data: { identifier: v, value: s } }}
   / v:Identifier _ '=' _ "\\" v2:Identifier { return { type: 'VarDef', data: { identifier: v, variable: v2 } }}
+  / v:Identifier _ '=' _ NotYetSupported
+MusicParam
+	= Music
+    / "{" __ Music __ "}" _
+    / VariableRef
 TransposeFunction
-    = "\\transpose" _ Pitch _ Pitch _ Music _ /
-    "\\modalTranspose" _ Pitch _ Pitch _ Music Music _
+    = "\\transpose" _ Pitch _ Pitch _ MusicParam _ /
+    "\\modalTranspose" _ Pitch _ Pitch _ Music _ MusicParam _
 RepeatFunction
-	= "\\repeat" _ "unfold" _ no:[0-9]+ _ Music {return {"t": "repeat"}; }
+	= "\\repeat" _ "unfold" _ no:[0-9]+ _ MusicParam __ {return {"t": "repeat"}; }
 Score
 	= "\\score" _ m:ScoreMusic { 
 		var res = {
@@ -149,20 +155,21 @@ Sequence
 		return { type: 'SimpleSequence', data: notes };
 	}
 SequenceDelimited
-	= "{" __ seq:Sequence __ "}" { 
+	= "{" __ seq:Sequence __ "}" __ { 
 		return seq;
 	}
     
 LyricMode
-	= "\\lyricmode" _ "{" _ LyricSyllable* "}"
+	= "\\lyricmode" __ "{" __ LyricSyllable* "}"
 LyricSyllable
-	= [a-zA-Z\.,?!]+ _
+	= [a-zA-ZæøåÆØÅüÜßöÖäÄ\.,?;!’': ]+ __
     / "--" _
     / "__" _
     / "_" _
 MusicElement
 	= Note /
     Rest /
+    NotYetSupported /
     transpose: TransposeFunction /
     repeat: RepeatFunction /
     Chord /
@@ -173,6 +180,14 @@ MusicElement
     SequenceDelimited /
     Music /
     variable: VariableRef
+NotYetSupported
+	= "\\<" __
+    / "\\!" __
+    / "\\>" __
+    / "\\bar" __ String
+    / "<<" __ (Music __)+ __ ">>" __
+    / "<<" __ Music __ ("\\new Voice" __ Music __)+ __ ">>" __
+    / "\\override" _ [a-zA-Z.-]+ __ "=" __ String __
 VariableRef
 	= "\\" name:[a-zA-Z]+ __ { return { type: "Variable", data: {name: name.join('')}}; }
 Command "notecommand"
@@ -185,6 +200,7 @@ Command "notecommand"
     ")" __ /
     "|" __ /
     "\\arpeggio" __
+    / "\\tempo" _ String _ [0-9]+ __ "=" __ [0-9]+ __
 Comment =
 	"%" c:([^\n]*) "\n" { return { "Comment": c.join('') }; }
 ClefDef "command_element_clef"
@@ -198,13 +214,16 @@ Mode
     
 Partial
 	= '\\partial' _ pd:Duration _ 
+    
+TimeGroupList
+	= "#'(" (Integer __)* ")" __
 TimeDef "command_element_time"
-	= "\\time" _ s:Integer "/" d:Integer _ pm:Partial? {
+	= "\\time" _ TimeGroupList? s:Integer "/" d:Integer _ pm:Partial? {
 	return { type: 'RegularMeter', data: parseLilyMeter('\\time ' + s + '/' + d, pm) };
 	}
     
 Rest
-	= [rsR] o:Octave d:Duration? ![a-zA-Z] __ { 
+	= [rsR] o:Octave d:Duration? ![a-zA-Z] __ Markup? { 
 		var lastDur = theTime(d);
         var mul;
 		return {
@@ -215,8 +234,17 @@ Rest
                   }
                };
 		}
+MarkupSymbol
+	= "\\sharp" / "\\natural" / "\\flat"
+Markup
+	= "^" "\\markup" "{" s:String "}" __
+    / "^" s:String __
+    / "^" "\\markup" __ "{" MarkupSymbol "}" __
+    / "--" __
+    / "-." __
+    / "-!" __
 Note 
-	= p:Pitch d:Duration? tie:"~"? ![a-zA-Z0-9] __ { 
+	= p:Pitch d:Duration? tie:(__ "~")? ![a-zA-Z0-9] __ Markup? { 
    		var lastDur = theTime(d);
 		var res = { type: 'Note', data: { dur: lastDur, pitches: [p.data] } };
 		if (tie) res.data.tie = true;
@@ -229,7 +257,7 @@ Note
 		//			},
 		//
 Chord
-	= "<" n:(Pitch MultiPitch*) ">" d:Duration? tie:"~"? __ { 
+	= "<" __ n:(Pitch MultiPitch*) __ ">" d:Duration? tie:"~"? __ Markup? { 
 		var lastDur = theTime(d);
 		var pitches = [n[0]].concat(n[1]);
 		
@@ -261,7 +289,7 @@ Multiplier
 	= "*" num:Integer "/" den:Integer { return {num:num, den:den}; }
 	/ "*" num:Integer { return {num:num, den:1}; }
 Pitch "pitch"
-	= pit:[a-h] i:Inflection? o:Octave tie:"~"? ![a-zA-Z] { 
+	= pit:[a-h] i:Inflection? o:Octave forceAccidental: "!"? tie:"~"? ![a-zA-Z] { 
 				    var alteration = 0;
 					switch (i) {
                         case "is": alteration = 1; break;
