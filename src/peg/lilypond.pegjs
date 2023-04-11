@@ -36,7 +36,7 @@ variable
 		ly = ly.replace('\\clef ', '');
 		switch(ly) {
 			case 'G': case 'G2': case 'violin': case 'treble': return { clefType: ClefType.G, line: -2 };
-			case 'tenorG': return { clefType: ClefType.G8, line: -2 };
+			case 'treble_8': case 'tenorG': return { clefType: ClefType.G8, line: -2 };
 			case 'tenor': return { clefType: ClefType.C, line: 2 };
 			case 'F': case 'bass': return { clefType: ClefType.F, line: 2 };
 			case 'C': case 'alto': return { clefType: ClefType.C, line: 0 };
@@ -191,16 +191,16 @@ NotYetSupported
 VariableRef
 	= "\\" name:[a-zA-Z]+ __ { return { type: "Variable", data: {name: name.join('')}}; }
 Command "notecommand"
-	= "\\numericTimeSignature" _ /
-    "[" __ /
-    "]" __ /
-    "\\(" __ /
-    "\\)" __ /
-    "(" __ /
-    ")" __ /
-    "|" __ /
-    "\\arpeggio" __
-    / "\\tempo" _ String _ [0-9]+ __ "=" __ [0-9]+ __
+	= "\\numericTimeSignature" _ { return { type: 'Command', subType: 'NumericTimeSignature' }; }/
+    "[" __ { return { type: 'Command', subType: 'BeginBeam' }; }/
+    "]" __ { return { type: 'Command', subType: 'EndBeam' }; }/
+    "\\(" __ { return { type: 'Command', subType: 'BeginPhrase' }; }/
+    "\\)" __ { return { type: 'Command', subType: 'EndPhrase' }; }/
+    "(" __ { return { type: 'Command', subType: 'BeginSlur' }; }/
+    ")" __ { return { type: 'Command', subType: 'EndSlur' }; }/
+    "|" __ { return { type: 'Command', subType: 'ForceBar' }; }/
+    "\\arpeggio" __ { return { type: 'Command', subType: 'Arpeggio' }; }
+    / "\\tempo" _ String _ [0-9]+ __ "=" __ [0-9]+ __ { return { type: 'Command', subType: 'Tempo' }; }
 Comment =
 	"%" c:([^\n]*) "\n" { return { "Comment": c.join('') }; }
 ClefDef "command_element_clef"
@@ -321,7 +321,7 @@ Relative "relative_music"
     }
 Version
 	= version:"\\version" _ s:String {
-  	return { version: s }
+  		return { type: 'Metadata', version: s }
     }
 Include
 	= version:"\\include" _ s:String {

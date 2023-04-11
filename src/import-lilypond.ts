@@ -1,6 +1,6 @@
-import { Alteration, BaseSequence, Clef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef } from 'jmusic-model/model';
+import { Alteration, BaseSequence, Clef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef, createNote } from 'jmusic-model/model';
 import { StateChange } from 'jmusic-model/model/states/state';
-import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy, SimpleSequenceDefLy } from './intermediate-ly';
+import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy, SimpleSequenceDefLy, StaffThingLy } from './intermediate-ly';
 import {parse} from './peg/lilypond';
 
 export function load(ly: string, settings?: { startRule: string }): FileItemLy[] | MusicElementDefLy | PitchDefLy {
@@ -85,7 +85,7 @@ class LilypondConverter {
 				
 			case 'Note': 
 				//console.log('Note: ', seqElm);
-				return new Note(seqElm.data.pitches.map(p => this.convertPitch(p)), seqElm.data.dur);
+				return createNote(seqElm.data.pitches.map(p => this.convertPitch(p)), seqElm.data.dur);
 				
 			default: 
 				console.error('Illegal element: ', seqElm);
@@ -126,7 +126,11 @@ class LilypondConverter {
 					
 					internalSequence.elements.forEach(elm => res.addElement(elm));
 				}
-					break;					
+					break;		
+				case 'Command': case 'Metadata': {
+					// ignore for now
+				}
+					break;
 				default: 
 					console.error('Illegal element: ', seqElm);
 					throw 'Illegal element';
@@ -226,14 +230,29 @@ export function lilypondToJMusic(ly: string): ScoreDef {
 
 				const converter = new LilypondConverter(scoreDef, variables);
 
-
+                if (!element.data) {
+                    element = { data: { staves: [
+                        {
+                            type: 'Staff', 
+                            data: [{
+                                type: 'Voice',
+                                data: {
+                                    content: {
+                                        type: 'SimpleSequence',
+                                        data: (element as any).n
+                                    }
+                                }
+                            }]
+                        }
+                    ]}} as FileItemLy;
+                }
 				//if (element.type !== 'Score') throw "Wrong element type: " + element.type;
-				element.data.staves.forEach(staff => {
+				(element.data as any).staves.forEach((staff: StaffDefLy) => {
 					if (staff.type === 'Staff') {
 						scoreDef.staves.push(converter.convertStaff(staff));
 					} else if (staff.type === 'StaffGroup') {
-						staff.data.forEach(staff => {
-							scoreDef.staves.push(converter.convertStaff(staff));
+						staff.data.forEach((staff: StaffThingLy) => {
+							scoreDef.staves.push(converter.convertStaff(staff as unknown as StaffDefLy));
 	
 						});
 					}

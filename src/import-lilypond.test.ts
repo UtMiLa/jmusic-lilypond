@@ -1,15 +1,15 @@
 import { FileItemLy, ScoreDefLy } from './intermediate-ly';
 import { expect } from 'chai';
 import { load } from './import-lilypond';
-import {Clef, ClefType, Key, MeterFactory, Note, Pitch, SimpleSequence, Time} from 'jmusic-model/model';
+import {Clef, ClefType, createNote, Key, MeterFactory, Note, Pitch, cloneNote, SimpleSequence, Time} from 'jmusic-model/model';
 
 describe('Lilypond import', () => {
 
     /*beforeEach(() => { 
     });*/
     function toNote(def: any) {
-        const note = new Note(def.data.pitches.map((p: any) => new Pitch(p[0], p[1], p[2])), def.data.dur);
-        if (def.data.tie) note.tie = true;
+        let note = createNote(def.data.pitches.map((p: any) => new Pitch(p[0], p[1], p[2])), def.data.dur);
+        if (def.data.tie) note = cloneNote(note, { tie: true });
         return note;
     }
 
@@ -53,18 +53,18 @@ describe('Lilypond import', () => {
 
         const res2a = load("<d,>16 ", {startRule: 'MusicElement'});
 
-        expect(toNote(res2a)).to.deep.eq(new Note([
+        expect(toNote(res2a)).to.deep.eq(createNote([
             new Pitch(1, 2, 0),
         ], Time.newSpan(1, 16)));
 
         const res3 = load("e2. ", {startRule: 'MusicElement'});
-        const note3 = new Note([new Pitch(2, 3, 0)], Time.newSpan(3, 4));
+        const note3 = createNote([new Pitch(2, 3, 0)], Time.newSpan(3, 4));
         expect(toNote(res3)).to.deep.eq(note3);
 
         const res4 = load("fisis1~ ", {startRule: 'MusicElement'});
-        const note4 = new Note([new Pitch(3, 3, 2)], Time.newSpan(1, 1));
-        note4.tie = true;
-        expect(toNote(res4)).to.deep.eq(note4);
+        const note4 = createNote([new Pitch(3, 3, 2)], Time.newSpan(1, 1));
+        const note5 = cloneNote(note4, { tie: true });
+        expect(toNote(res4)).to.deep.eq(note5);
 
     });
 
@@ -74,30 +74,7 @@ describe('Lilypond import', () => {
 
         expect(res1).to.deep.eq( {type: 'Note', data: { pitches: [], dur: Time.newSpan(1, 4) }});
 
-        /*const res2 = load("<d, fis, a,>2 ", {startRule: 'MusicElement'});
 
-        expect(res2).to.deep.eq({type: 'Note', data: { 
-            pitches: [
-            [1, 2, 0],
-            [3, 2, 1],
-            [5, 2, 0]
-        ], dur: Time.newSpan(1, 2) }});
-
-        const res2a = load("<d,>2 ", {startRule: 'MusicElement'});
-
-        expect(toNote(res2a)).to.deep.eq(new Note([
-            new Pitch(1, 2, 0),
-        ], Time.newSpan(1, 2)));
-
-        const res3 = load("e2. ", {startRule: 'MusicElement'});
-        const note3 = new Note([new Pitch(2, 3, 0)], Time.newSpan(3, 4));
-        expect(toNote(res3)).to.deep.eq(note3);
-
-        const res4 = load("fisis1~ ", {startRule: 'MusicElement'});
-        const note4 = new Note([new Pitch(3, 3, 2)], Time.newSpan(1, 1));
-        note4.tie = true;
-        expect(toNote(res4)).to.deep.eq(note4);
-*/
     });
 
     it('should parse a clef', () => {
@@ -276,38 +253,7 @@ describe('Lilypond import', () => {
                ]
             }
          });
-         
-         
-         
-         
-         
-// Simple Arithmetics Grammar
-// ==========================
-//
-// Accepts expressions like "2 * (3 + 4)" and computes their value.
-
-File
-  = Statement*
-  
-Statement
-  = Note
-  / Assignment
-
-Expression
-  = "{" Note* "}"
-  
-Identifier
-  = [a-zA-Z]+
-
-Assignment
-  = i:Identifier _ "=" _ e:Expression { return { type: 'assignment', 'var': i, ex: e }; }
-
-Note
-  = n:[a-g] ![a-zA-Z] _ { return {type: 'note', value: n}; }
-
-_ "whitespace"
-  = [ \t\n\r]*         
-         
+        
          */
 
 

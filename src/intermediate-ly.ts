@@ -12,8 +12,8 @@ export interface StaffDefLy {
 }
 
 export interface StaffGroupDefLy {
-    type: 'StaffGroup',
-    data: StaffDefLy[]
+    type: 'StaffGroup';
+    data: StaffDefLy[];
 }
 
 export type FileItemLy = ScoreDefLy | VarDefLy;
@@ -40,15 +40,24 @@ export interface VariableDefLy {
     }
 }
 
+export interface MetadataLy {
+    type: 'Metadata',
+    version?: string;
+}
 
 export interface SimpleSequenceDefLy {
     type: 'SimpleSequence';
     data: MusicElementDefLy[];
 }
 
+export interface CommandDefLy {
+    type: 'Command';
+    subType: string;
+}
+
 export type SequenceDefLy = SimpleSequenceDefLy;
 
-export type MusicElementDefLy = NoteDefLy | ClefDefLy | KeyDefLy | MeterDefLy | VariableDefLy | SimpleSequenceDefLy;
+export type MusicElementDefLy = NoteDefLy | ClefDefLy | KeyDefLy | MeterDefLy | VariableDefLy | SimpleSequenceDefLy | CommandDefLy | MetadataLy;
 
 export interface NoteDefLy {
     type: 'Note';
