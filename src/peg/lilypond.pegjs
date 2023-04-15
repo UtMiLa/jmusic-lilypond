@@ -77,7 +77,7 @@ variable
 
 }
 
-
+/* top level expressions */
 
 File
 	= ex:Expression * { return ex.filter(x => x); }
@@ -94,186 +94,15 @@ Expression
   comment:Comment { return { type:"Comment", data: comment}; }  /
   variableDef:VariableDef { return variableDef; } /
   sch: SchemeStuff /
-  s:[ \t\n\r]+ { return undefined; } 
-Header
-    = "\\header" __ "{" _ hd:HeaderDeclaration* "}"
-    / "\\paper" _ "{" __ ([a-z-]+ __ "=" __ [0-9]+ __)* "}"
-HeaderDeclaration
-	= v:Identifier __ "=" __ s: String _
-    / v:Identifier __ "=" __ s: MarkupDeclaration
-MarkupSymbol
-	= "\\sharp" / "\\natural" / "\\flat"
-MarkupDeclaration
-	= "\\markup" __ MarkupDefinition __
-MarkupDefinition
-	= "{" __ MarkupDefinitionItem* __ "}"
-MarkupDefinitionItem
-	= [^{}]
-    / MarkupDefinition __
-Identifier
-	= String /
-    id:[a-zA-Z]+ { return id.join(''); }
-VariableDef
-  = v:Identifier __ '=' __ "{" __ LyricMode __ "}"
-  / v:Identifier _ '=' _ s:SequenceDelimited { return { type: 'VarDef', data: { identifier: v, value: s } }}
-  / v:Identifier _ '=' _ "\\" v2:Identifier { return { type: 'VarDef', data: { identifier: v, variable: v2 } }}
-  / v:Identifier _ '=' _ NotYetSupported
-MusicParam
-	= Music
-    / "{" __ Music __ "}" _
-    / VariableRef
-TransposeFunction
-    = "\\transpose" _ Pitch _ Pitch _ MusicParam _ /
-    "\\modalTranspose" _ Pitch _ Pitch _ Music _ MusicParam _
-RepeatFunction
-	= "\\repeat" _ "unfold" _ no:[0-9]+ _ MusicParam __ {return {"t": "repeat"}; }
-SchemeStuff
-	= "#(" SchemeInternal ")"
-SchemeToken
-	= [-a-zA-Z0-9]+ __
-    / "(" SchemeInternal ")"
-SchemeInternal
-	= SchemeToken*
-MidiDef
-	= "\\midi" __ MarkupDefinition
-LayoutDef
-	= "\\layout" __ MarkupDefinition
-Score
-	= "\\score" __ m:ScoreMusic { 
-		var res = {
-			type: "Score",
-			data: {
-            	staves: m
-			}
-		};
-		return res;
-	}
-ScoreMusic
-	= "{" __ t:ScoreThings* "}" __ { return t; }
-    / "{" __ "<<" __ t:ScoreThings* __ ">>" __ "}" __ { return t; }
-ScoreThings
-	= s:StaffExpression __ { return s; } /
-    p:PianoStaffExpression __ { return p; } /
-    sg:StaffGroupExpression __ {return sg; } /
-    MidiDef __ /
-    LayoutDef __
-StaffGroupExpression
-	= "\\context" _ "StaffGroup" __ "<<" __ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
-StaffExpression
-	= "\\new" _ "Staff" __ m:Music __ { return { type: "Staff", data: m }; }
-    / "\\new" _ "Staff" __ "<<" __ m:StaffThings* __ ">>" __ { return { type: "Staff", data: m }; }
-StaffThings
-	= "\\new" _ "Voice" __ "=" __ Identifier __ "<<" __ m:Sequence __ ">>" _ { return { type: 'Voice', data: { content: m } } }
-    / m:MusicElement { return m }
-PianoStaffExpression
-    = "\\new" _ "PianoStaff" __ "<<" __ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
-Music
-	= SequenceDelimited /
-    "{" __ "<<" __ StaffExpression* ">>" __ "}" /
-    "{" __ "<<" __ PianoStaffExpression* ">>" __ "}"
-Sequence
-	= __ notes:MusicElement* __ { 
-		return { type: 'SimpleSequence', data: notes };
-	}
-SequenceDelimited
-	= "{" __ seq:Sequence __ "}" __ { 
-		return seq;
-	}
-    
-LyricMode
-	= "\\lyricmode" __ "{" __ LyricSyllable* "}"
-LyricSyllable
-	= [a-zA-ZæøåÆØÅüÜßöÖäÄ\.,?;!’': ]+ __
-    / "--" _
-    / "__" _
-    / "_" _
-MusicElement
-	= Note /
-    Rest /
-    NotYetSupported /
-    transpose: TransposeFunction /
-    repeat: RepeatFunction /
-    Chord /
-    ClefDef /
-    KeyDef /
-    TimeDef /
-    Command /
-    SequenceDelimited /
-    Music /
-    variable: VariableRef
-NotYetSupported
-	= "\\<" __
-    / "\\!" __
-    / "\\>" __
-    / "\\bar" __ String
-    / "<<" __ (Music __)+ __ ">>" __
-    / "<<" __ Music __ ("\\new Voice" __ Music __)+ __ ">>" __
-    / "\\override" _ [a-zA-Z.-]+ __ "=" __ String __
-VariableRef
-	= "\\" name:[a-zA-Z]+ __ { return { type: "Variable", data: {name: name.join('')}}; }
-Command "notecommand"
-	= "\\numericTimeSignature" _ { return { type: 'Command', subType: 'NumericTimeSignature' }; }/
-    "[" __ { return { type: 'Command', subType: 'BeginBeam' }; }/
-    "]" __ { return { type: 'Command', subType: 'EndBeam' }; }/
-    "\\(" __ { return { type: 'Command', subType: 'BeginPhrase' }; }/
-    "\\)" __ { return { type: 'Command', subType: 'EndPhrase' }; }/
-    "(" __ { return { type: 'Command', subType: 'BeginSlur' }; }/
-    ")" __ { return { type: 'Command', subType: 'EndSlur' }; }/
-    "|" __ { return { type: 'Command', subType: 'ForceBar' }; }/
-    "\\arpeggio" __ { return { type: 'Command', subType: 'Arpeggio' }; }
-    / "\\tempo" _ String _ [0-9]+ __ "=" __ [0-9]+ __ { return { type: 'Command', subType: 'Tempo' }; }
-Comment =
-	"%" c:([^\n]*) "\n" { return { "Comment": c.join('') }; }
-ClefDef "command_element_clef"
-	= "\\clef" _ s:Identifier _ { return { type: 'Clef', data: parseLilyClef('\\clef ' + s) }; } 
-    
-KeyDef "command_event_key"
-	= "\\key" _ s:Pitch _ m:Mode _ { return { type: 'Key', data: { pitch: s.data, mode: m } }; }
-    
-Mode
-	= "\\major" / "\\minor"
-    
-Partial
-	= '\\partial' _ pd:Duration _ 
-    
-TimeGroupList
-	= "#'(" (Integer __)* ")" __
-TimeDef "command_element_time"
-	= "\\time" _ TimeGroupList? s:Integer "/" d:Integer _ pm:Partial? {
-	return { type: 'RegularMeter', data: parseLilyMeter('\\time ' + s + '/' + d, pm) };
-	}
-    
-Rest
-	= [rsR] o:Octave d:Duration? ![a-zA-Z] __ Markup? { 
-		var lastDur = theTime(d);
-        var mul;
-		return {
-                  type: "Note",
-                  data: {
-                     dur: lastDur,
-                     pitches: []
-                  }
-               };
-		}
-Markup
-	= "^" MarkupDeclaration __
-    / "^" s:String __
-    / "--" __
-    / "-." __
-    / "-!" __
-Note 
-	= p:Pitch d:Duration? tie:(__ "~")? ![a-zA-Z0-9] __ Markup? { 
-   		var lastDur = theTime(d);
-		var res = { type: 'Note', data: { dur: lastDur, pitches: [p.data] } };
-		if (tie) res.data.tie = true;
-		return res;
-	}
-		//				time: lastDur,
-		//				noteId: "n" + lastDur.num + "_" + lastDur.den,
-        //                dots: d && d.dots ? d.dots.length : undefined,
-        //                tuplet: d ? d.mul : undefined
-		//			},
-		//
+  s:[ \t\n\r]+ { return undefined; }
+
+/* rest is sorted alphabetically */
+
+_ "whitespace"
+  = s:(WhitespaceItem+) { return undefined; }
+  
+__ "optional_whitespace"
+	= s:(WhitespaceItem*) { return undefined; }
 Chord
 	= "<" __ n:(Pitch MultiPitch*) __ ">" d:Duration? tie:"~"? __ Markup? { 
 		var lastDur = theTime(d);
@@ -295,17 +124,129 @@ Chord
 		return res;		
 		
 	}
-MultiPitch
-	= _ p:Pitch { return p; }
+Command "notecommand"
+	= "\\numericTimeSignature" _ { return { type: 'Command', subType: 'NumericTimeSignature' }; }/
+    "[" __ { return { type: 'Command', subType: 'BeginBeam' }; }/
+    "]" __ { return { type: 'Command', subType: 'EndBeam' }; }/
+    "\\(" __ { return { type: 'Command', subType: 'BeginPhrase' }; }/
+    "\\)" __ { return { type: 'Command', subType: 'EndPhrase' }; }/
+    "(" __ { return { type: 'Command', subType: 'BeginSlur' }; }/
+    ")" __ { return { type: 'Command', subType: 'EndSlur' }; }/
+    "|" __ { return { type: 'Command', subType: 'ForceBar' }; }/
+    "\\arpeggio" __ { return { type: 'Command', subType: 'Arpeggio' }; }
+    / "\\tempo" _ String _ [0-9]+ __ "=" __ [0-9]+ __ { return { type: 'Command', subType: 'Tempo' }; }
+Comment =
+	"%" c:([^\n]*) "\n" { return { "Comment": c.join('') }; }
+ClefDef "command_element_clef"
+	= "\\clef" _ s:Identifier _ { return { type: 'Clef', data: parseLilyClef('\\clef ' + s) }; } 
+Dots 
+	= "."+
 Duration
 	= d:(DurationNumber / "\\brevis") dot:Dots? mul:Multiplier? { return d + (dot ? dot.join('') : ''); }   
 DurationNumber
-	= d:[0-9]+ ![0-9] { return d.join('') }
-Dots 
-	= "."+
+	= d:[0-9]+ ![0-9] { return d.join('') }    
+
+Header
+    = "\\header" __ "{" _ hd:HeaderDeclaration* "}"
+    / "\\paper" _ "{" __ ([a-z-]+ __ "=" __ [0-9]+ __)* "}"
+HeaderDeclaration
+	= v:Identifier __ "=" __ s: String _
+    / v:Identifier __ "=" __ s: MarkupDeclaration
+Identifier
+	= String /
+    id:[a-zA-Z]+ { return id.join(''); }
+Include
+	= version:"\\include" _ s:String {
+  	return { include: s }
+    }    
+Inflection
+	= "s" / "f" / "isis" / "eses" / "is" / "es"
+Integer
+	= n:[0-9]+ { return +n.join(''); }
+KeyDef "command_event_key"
+	= "\\key" _ s:Pitch _ m:Mode _ { return { type: 'Key', data: { pitch: s.data, mode: m } }; }
+    
+LayoutDef
+	= "\\layout" __ MarkupDefinition
+LyricMode
+	= "\\lyricmode" __ "{" __ LyricSyllable* "}"
+LyricSyllable
+	= [a-zA-ZæøåÆØÅüÜßöÖäÄ\.,?;!’': ]+ __
+    / "--" _
+    / "__" _
+    / "_" _
+Markup
+	= "^" MarkupDeclaration __
+    / "^" s:String __
+    / "--" __
+    / "-." __
+    / "-!" __
+
+MarkupSymbol
+	= "\\sharp" / "\\natural" / "\\flat"
+MarkupDeclaration
+	= "\\markup" __ MarkupDefinition __
+MarkupDefinition
+	= "{" __ MarkupDefinitionItem* __ "}"
+MarkupDefinitionItem
+	= [^{}]
+    / MarkupDefinition __
+MidiDef
+	= "\\midi" __ MarkupDefinition
+Mode
+	= "\\major" / "\\minor"
+MultiPitch
+	= _ p:Pitch { return p; }
+    
+Music
+	= SequenceDelimited /
+    "{" __ "<<" __ StaffExpression* ">>" __ "}" /
+    "{" __ "<<" __ PianoStaffExpression* ">>" __ "}"
+
+MusicElement
+	= Note /
+    Rest /
+    NotYetSupported /
+    transpose: TransposeFunction /
+    repeat: RepeatFunction /
+    Chord /
+    ClefDef /
+    KeyDef /
+    TimeDef /
+    Command /
+    SequenceDelimited /
+    Music /
+    variable: VariableRef
+MusicParam
+	= Music
+    / "{" __ Music __ "}" _
+    / VariableRef
+Note 
+	= p:Pitch d:Duration? tie:(__ "~")? ![a-zA-Z0-9] __ Markup? { 
+   		var lastDur = theTime(d);
+		var res = { type: 'Note', data: { dur: lastDur, pitches: [p.data] } };
+		if (tie) res.data.tie = true;
+		return res;
+	}
+		//				time: lastDur,
+		//				noteId: "n" + lastDur.num + "_" + lastDur.den,
+        //                dots: d && d.dots ? d.dots.length : undefined,
+        //                tuplet: d ? d.mul : undefined
+		//			},
+		//
+NotYetSupported
+	= "\\<" __
+    / "\\!" __
+    / "\\>" __
+    / "\\bar" __ String
+    / "<<" __ (Music __)+ __ ">>" __
+    / "<<" __ Music __ ("\\new Voice" __ Music __)+ __ ">>" __
+    / "\\override" _ [a-zA-Z.-]+ __ "=" __ String __
 Multiplier
 	= "*" num:Integer "/" den:Integer { return {num:num, den:den}; }
 	/ "*" num:Integer { return {num:num, den:1}; }
+Octave "sup_quotes_sub_quotes"
+	= s:[\',]* { return s.join(""); }
 Pitch "pitch"
 	= pit:[a-h] i:Inflection? o:Octave forceAccidental: "!"? tie:"~"? ![a-zA-Z] { 
 				    var alteration = 0;
@@ -327,28 +268,77 @@ Pitch "pitch"
 						data: [['c', 'd', 'e', 'f', 'g', 'a', 'b'].indexOf(pit.replace('h', 'b')), octave, alteration]
 					};
 				}
-Inflection
-	= "s" / "f" / "isis" / "eses" / "is" / "es"
+
     
-Octave "sup_quotes_sub_quotes"
-	= s:[\',]* { return s.join(""); }
+Partial
+	= '\\partial' _ pd:Duration _ 
     
+PianoStaffExpression
+    = "\\new" _ "PianoStaff" __ "<<" __ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
+
 Relative "relative_music"
 	= rel:"\\relative" _ s:Note __ m: Music {
   	return { rel: s, mus: m }
-    }
-Version
-	= version:"\\version" _ s:String {
-  		return { type: 'Metadata', version: s }
-    }
-Include
-	= version:"\\include" _ s:String {
-  	return { include: s }
-    }    
+    }	
+RepeatFunction
+	= "\\repeat" _ "unfold" _ no:[0-9]+ _ MusicParam __ {return {"t": "repeat"}; }
+Rest
+	= [rsR] o:Octave d:Duration? ![a-zA-Z] __ Markup? { 
+		var lastDur = theTime(d);
+        var mul;
+		return {
+                  type: "Note",
+                  data: {
+                     dur: lastDur,
+                     pitches: []
+                  }
+               };
+		}
+
+SchemeStuff
+	= "#(" SchemeInternal ")"
+SchemeToken
+	= [-a-zA-Z0-9]+ __
+    / "(" SchemeInternal ")"
+SchemeInternal
+	= SchemeToken*
+Score
+	= "\\score" __ m:ScoreMusic { 
+		var res = {
+			type: "Score",
+			data: {
+            	staves: m
+			}
+		};
+		return res;
+	}
+ScoreMusic
+	= "{" __ t:ScoreThings* "}" __ { return t; }
+    / "{" __ "<<" __ t:ScoreThings* __ ">>" __ "}" __ { return t; }
+ScoreThings
+	= s:StaffExpression __ { return s; } /
+    p:PianoStaffExpression __ { return p; } /
+    sg:StaffGroupExpression __ {return sg; } /
+    MidiDef __ /
+    LayoutDef __
+Sequence
+	= __ notes:MusicElement* __ { 
+		return { type: 'SimpleSequence', data: notes };
+	}
+SequenceDelimited
+	= "{" __ seq:Sequence __ "}" __ { 
+		return seq;
+	}
+StaffExpression
+	= "\\new" _ "Staff" __ m:Music __ { return { type: "Staff", data: m }; }
+    / "\\new" _ "Staff" __ "<<" __ m:StaffThings* __ ">>" __ { return { type: "Staff", data: m }; }
+StaffGroupExpression
+	= "\\context" _ "StaffGroup" __ "<<" __ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
+StaffThings
+	= "\\new" _ "Voice" __ "=" __ Identifier __ "<<" __ m:Sequence __ ">>" _ { return { type: 'Voice', data: { content: m } } }
+    / m:MusicElement { return m }
 String
 	= "\"" s:StringChar* "\"" { return s.join(""); }
-Integer
-	= n:[0-9]+ { return +n.join(''); }
 StringChar
 	= StringEscape c:. { return c; }
     /
@@ -357,11 +347,27 @@ StringChar
 StringEscape
 	= "\\"
 
-_ "whitespace"
-  = s:(WhitespaceItem+) { return undefined; }
-  
-__ "optional_whitespace"
-	= s:(WhitespaceItem*) { return undefined; }
+TimeGroupList
+	= "#'(" (Integer __)* ")" __
+TimeDef "command_element_time"
+	= "\\time" _ TimeGroupList? s:Integer "/" d:Integer _ pm:Partial? {
+	return { type: 'RegularMeter', data: parseLilyMeter('\\time ' + s + '/' + d, pm) };
+	}    
+TransposeFunction
+    = "\\transpose" _ Pitch _ Pitch _ MusicParam _ /
+    "\\modalTranspose" _ Pitch _ Pitch _ Music _ MusicParam _
+    
+VariableDef
+  = v:Identifier __ '=' __ "{" __ LyricMode __ "}"
+  / v:Identifier _ '=' _ s:SequenceDelimited { return { type: 'VarDef', data: { identifier: v, value: s } }}
+  / v:Identifier _ '=' _ "\\" v2:Identifier { return { type: 'VarDef', data: { identifier: v, variable: v2 } }}
+  / v:Identifier _ '=' _ NotYetSupported
+VariableRef
+	= "\\" name:[a-zA-Z]+ __ { return { type: "Variable", data: {name: name.join('')}}; }
+Version
+	= version:"\\version" _ s:String {
+  		return { type: 'Metadata', version: s }
+    }
 
 WhitespaceItem
 	= [ \t\n\r]+
