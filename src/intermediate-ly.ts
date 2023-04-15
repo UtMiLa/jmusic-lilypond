@@ -66,9 +66,15 @@ export interface NoteDefLy {
         pitches: ShortPitchDefLy[];
     }
 }
+
+export interface ClefDefLyData {
+    clefType: 'g' | 'f' | 'c' | 'perc';
+    line: number;
+    transpose?: number;
+}
 export interface ClefDefLy {
     type: 'Clef';
-    data: ClefDef;
+    data: ClefDefLyData;
 }
 export interface KeyDefLy {
     type: 'Key';

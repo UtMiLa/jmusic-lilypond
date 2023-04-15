@@ -12,12 +12,6 @@ variable
 
 */
 {
-	var ClefType = {
-		G: 4,
-		C: 0,
-		F: -4,
-		G8: -3
-	};
 
 	function parseLilyMeter(ly, pm) {
 		const tokens = ly.split(' ');
@@ -35,11 +29,11 @@ variable
 	function parseLilyClef(ly) {
 		ly = ly.replace('\\clef ', '');
 		switch(ly) {
-			case 'G': case 'G2': case 'violin': case 'treble': return { clefType: ClefType.G, line: -2 };
-			case 'treble_8': case 'tenorG': return { clefType: ClefType.G8, line: -2 };
-			case 'tenor': return { clefType: ClefType.C, line: 2 };
-			case 'F': case 'bass': return { clefType: ClefType.F, line: 2 };
-			case 'C': case 'alto': return { clefType: ClefType.C, line: 0 };
+			case 'G': case 'G2': case 'violin': case 'treble': case 'soprano': return { clefType: 'g', line: -2 };
+			case 'treble_8': case 'tenorG': return { clefType: 'g', line: -2, transpose: -7 };
+			case 'tenor': return { clefType: 'c', line: 2 };
+			case 'F': case 'bass': return { clefType: 'f', line: 2 };
+			case 'C': case 'alto': return { clefType: 'c', line: 0 };
 		}
 		throw 'Illegal clef: ' + ly;
 	}
@@ -99,12 +93,23 @@ Expression
   notes: MusicElement+ { return {n: notes}; } /
   comment:Comment { return { type:"Comment", data: comment}; }  /
   variableDef:VariableDef { return variableDef; } /
+  sch: SchemeStuff /
   s:[ \t\n\r]+ { return undefined; } 
 Header
-    = "\\header" _ "{" _ hd:HeaderDeclaration* "}"
+    = "\\header" __ "{" _ hd:HeaderDeclaration* "}"
     / "\\paper" _ "{" __ ([a-z-]+ __ "=" __ [0-9]+ __)* "}"
 HeaderDeclaration
-	= v: Identifier _ "=" _ s: String _
+	= v:Identifier __ "=" __ s: String _
+    / v:Identifier __ "=" __ s: MarkupDeclaration
+MarkupSymbol
+	= "\\sharp" / "\\natural" / "\\flat"
+MarkupDeclaration
+	= "\\markup" __ MarkupDefinition __
+MarkupDefinition
+	= "{" __ MarkupDefinitionItem* __ "}"
+MarkupDefinitionItem
+	= [^{}]
+    / MarkupDefinition __
 Identifier
 	= String /
     id:[a-zA-Z]+ { return id.join(''); }
@@ -122,8 +127,19 @@ TransposeFunction
     "\\modalTranspose" _ Pitch _ Pitch _ Music _ MusicParam _
 RepeatFunction
 	= "\\repeat" _ "unfold" _ no:[0-9]+ _ MusicParam __ {return {"t": "repeat"}; }
+SchemeStuff
+	= "#(" SchemeInternal ")"
+SchemeToken
+	= [-a-zA-Z0-9]+ __
+    / "(" SchemeInternal ")"
+SchemeInternal
+	= SchemeToken*
+MidiDef
+	= "\\midi" __ MarkupDefinition
+LayoutDef
+	= "\\layout" __ MarkupDefinition
 Score
-	= "\\score" _ m:ScoreMusic { 
+	= "\\score" __ m:ScoreMusic { 
 		var res = {
 			type: "Score",
 			data: {
@@ -136,16 +152,21 @@ ScoreMusic
 	= "{" __ t:ScoreThings* "}" __ { return t; }
     / "{" __ "<<" __ t:ScoreThings* __ ">>" __ "}" __ { return t; }
 ScoreThings
-	= s:StaffExpression  { return s; } /
-    p:PianoStaffExpression { return p; }
+	= s:StaffExpression __ { return s; } /
+    p:PianoStaffExpression __ { return p; } /
+    sg:StaffGroupExpression __ {return sg; } /
+    MidiDef __ /
+    LayoutDef __
+StaffGroupExpression
+	= "\\context" _ "StaffGroup" __ "<<" __ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
 StaffExpression
 	= "\\new" _ "Staff" __ m:Music __ { return { type: "Staff", data: m }; }
-    / "\\new" _ "Staff" __ "<<" _ m:StaffThings* __ ">>" __ { return { type: "Staff", data: m }; }
+    / "\\new" _ "Staff" __ "<<" __ m:StaffThings* __ ">>" __ { return { type: "Staff", data: m }; }
 StaffThings
 	= "\\new" _ "Voice" __ "=" __ Identifier __ "<<" __ m:Sequence __ ">>" _ { return { type: 'Voice', data: { content: m } } }
     / m:MusicElement { return m }
 PianoStaffExpression
-    = "\\new" _ "PianoStaff" __ "<<" _ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
+    = "\\new" _ "PianoStaff" __ "<<" __ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
 Music
 	= SequenceDelimited /
     "{" __ "<<" __ StaffExpression* ">>" __ "}" /
@@ -234,12 +255,9 @@ Rest
                   }
                };
 		}
-MarkupSymbol
-	= "\\sharp" / "\\natural" / "\\flat"
 Markup
-	= "^" "\\markup" "{" s:String "}" __
+	= "^" MarkupDeclaration __
     / "^" s:String __
-    / "^" "\\markup" __ "{" MarkupSymbol "}" __
     / "--" __
     / "-." __
     / "-!" __

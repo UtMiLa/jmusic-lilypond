@@ -1,6 +1,6 @@
-import { Alteration, BaseSequence, Clef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef, createNote } from 'jmusic-model/model';
+import { Alteration, BaseSequence, Clef, ClefDef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef, createNote } from 'jmusic-model/model';
 import { StateChange } from 'jmusic-model/model/states/state';
-import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy, SimpleSequenceDefLy, StaffThingLy } from './intermediate-ly';
+import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy, SimpleSequenceDefLy, StaffThingLy, ClefDefLy } from './intermediate-ly';
 import {parse} from './peg/lilypond';
 
 export function load(ly: string, settings?: { startRule: string }): FileItemLy[] | MusicElementDefLy | PitchDefLy {
@@ -64,11 +64,25 @@ class LilypondConverter {
 		return new Pitch(pitch[0], pitch[1], pitch[2] as Alteration);
 	}
 
+	convertClefType(ly: string): ClefType {
+		switch(ly) {
+			case 'g': return ClefType.G;
+			case 'c': return ClefType.C;
+			case 'f': return ClefType.F;
+			//case 'perc': return ClefType.;
+		}
+		throw `Cleftype ${ly} not implemented`;
+	}
+
+	convertClefDef(ly: ClefDefLy): ClefDef {
+		return { clefType: this.convertClefType(ly.data.clefType), line: ly.data.line };
+	}
+
 	convertMusicElement(seqElm: MusicElementDefLy): Note | StateChange {
 		switch (seqElm.type) {
 			case 'Clef': 
 				console.log('Clef: ', seqElm);
-				return { isState: true, duration: Time.NoTime, clef: new Clef(seqElm.data) } as StateChange;
+				return { isState: true, duration: Time.NoTime, clef: new Clef(this.convertClefDef(seqElm)) } as StateChange;
 				
 			case 'Key': 
 				console.log('Key: ', seqElm);
