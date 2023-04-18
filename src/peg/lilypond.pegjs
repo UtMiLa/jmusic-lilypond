@@ -147,8 +147,8 @@ DurationNumber
 	= d:[0-9]+ ![0-9] { return d.join('') }    
 
 Header
-    = "\\header" __ "{" _ hd:HeaderDeclaration* "}"
-    / "\\paper" _ "{" __ ([a-z-]+ __ "=" __ [0-9]+ __)* "}"
+    = "\\header" __ "{" _ hd:HeaderDeclaration* "}" { return { type: 'Metedata' }; }
+    / "\\paper" _ "{" __ ([a-z-]+ __ "=" __ [0-9]+ __)* "}" { return { type: 'Metedata' }; }
 HeaderDeclaration
 	= v:Identifier __ "=" __ s: String _
     / v:Identifier __ "=" __ s: MarkupDeclaration
@@ -206,7 +206,7 @@ Music
 MusicElement
 	= Note /
     Rest /
-    NotYetSupported /
+    n:NotYetSupported { return { type: 'Metadata' }; } /
     transpose: TransposeFunction /
     repeat: RepeatFunction /
     Chord /
@@ -277,8 +277,8 @@ PianoStaffExpression
     = "\\new" _ "PianoStaff" __ "<<" __ s:StaffExpression+ __ ">>" _ { return { type: "StaffGroup", data: s } }
 
 Relative "relative_music"
-	= rel:"\\relative" _ s:Note __ m: Music {
-  	return { rel: s, mus: m }
+	= rel:"\\relative" _ s:Pitch __ m: Music {
+  	return { type: "Function", data: ["relative", s, m] };
     }	
 RepeatFunction
 	= "\\repeat" _ "unfold" _ no:[0-9]+ _ MusicParam __ {return {"t": "repeat"}; }
@@ -296,7 +296,7 @@ Rest
 		}
 
 SchemeStuff
-	= "#(" SchemeInternal ")"
+	= "#(" SchemeInternal ")" { return { type: 'Scheme' }; }
 SchemeToken
 	= [-a-zA-Z0-9]+ __
     / "(" SchemeInternal ")"
@@ -325,6 +325,9 @@ Sequence
 	= __ notes:MusicElement* __ { 
 		return { type: 'SimpleSequence', data: notes };
 	}
+SequenceOrCall
+	= Relative
+    / SequenceDelimited
 SequenceDelimited
 	= "{" __ seq:Sequence __ "}" __ { 
 		return seq;
@@ -359,9 +362,9 @@ TransposeFunction
     
 VariableDef
   = v:Identifier __ '=' __ "{" __ LyricMode __ "}"
-  / v:Identifier _ '=' _ s:SequenceDelimited { return { type: 'VarDef', data: { identifier: v, value: s } }}
+  / v:Identifier _ '=' _ s:SequenceOrCall { return { type: 'VarDef', data: { identifier: v, value: s } }}
   / v:Identifier _ '=' _ "\\" v2:Identifier { return { type: 'VarDef', data: { identifier: v, variable: v2 } }}
-  / v:Identifier _ '=' _ NotYetSupported
+  / v:Identifier _ '=' _ NotYetSupported { return { type: 'Metadata' }; }
 VariableRef
 	= "\\" name:[a-zA-Z]+ __ { return { type: "Variable", data: {name: name.join('')}}; }
 Version

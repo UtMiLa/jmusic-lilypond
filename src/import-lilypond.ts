@@ -118,6 +118,9 @@ class LilypondConverter {
 				case 'Note': 
 					res.addElement(this.convertMusicElement(seqElm));
 					break;
+				/*case 'Function': 
+					console.log('Resolving function: ', seqElm);				
+					break;*/
 				case 'Variable': {
 					if (/^voice(One|Two|Three|Four)/.test(seqElm.data.name)) {
 						break; // todo: stem directions!
@@ -126,6 +129,11 @@ class LilypondConverter {
 					if (resolved.data.value.type === 'SimpleSequence') {
 						const varSeq = this.convertSimpleSequence(resolved.data.value);
 						varSeq.elements.forEach(elm => res.addElement(elm));
+					/*} else if (resolved.data.value.type === 'Function') {
+
+						const funcSeq = this.convertSimpleSequence((resolved.data.value.data as any)[2]);
+						funcSeq.elements.forEach(elm => res.addElement(elm));
+						console.log('Resolved function: ', resolved.data);*/
 					} else {
 						console.log('Resolved: ', resolved);
 					}

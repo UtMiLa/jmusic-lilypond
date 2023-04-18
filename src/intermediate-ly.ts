@@ -57,7 +57,7 @@ export interface CommandDefLy {
 
 export type SequenceDefLy = SimpleSequenceDefLy;
 
-export type MusicElementDefLy = NoteDefLy | ClefDefLy | KeyDefLy | MeterDefLy | VariableDefLy | SimpleSequenceDefLy | CommandDefLy | MetadataLy;
+export type MusicElementDefLy = NoteDefLy | ClefDefLy | KeyDefLy | MeterDefLy | VariableDefLy | SimpleSequenceDefLy | CommandDefLy | MetadataLy | FunctionDefLy;
 
 export interface NoteDefLy {
     type: 'Note';
@@ -82,6 +82,11 @@ export interface KeyDefLy {
         pitch: ShortPitchDefLy;
         mode: '\\major' | '\\minor';
     };
+}
+
+export interface FunctionDefLy {
+    type: 'Function';
+    data: any[];
 }
 export interface MeterDefLy {
     type: 'RegularMeter';

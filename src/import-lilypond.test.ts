@@ -1,6 +1,6 @@
 import { FileItemLy, ScoreDefLy } from './intermediate-ly';
 import { expect } from 'chai';
-import { load } from './import-lilypond';
+import { lilypondToJMusic, load } from './import-lilypond';
 import {Clef, ClefType, createNote, Key, MeterFactory, Note, Pitch, cloneNote, SimpleSequence, Time} from 'jmusic-model/model';
 
 describe('Lilypond import to JMusic', () => {
@@ -90,5 +90,53 @@ describe('Lilypond import to JMusic', () => {
 
 
     });       
+
+    it('should import a function', () => {
+      const relFunc = load('var = \\relative d, { c4 }', {startRule: 'File'});
+      
+      expect (relFunc).to.deep.eq([{
+        type: 'VarDef',
+        data: {
+          identifier: 'var',
+          value: {
+            type: 'Function',
+            data: [
+              'relative',
+              {
+                type: 'Pitch',
+                data: [1, 2, 0]
+              },
+              {
+                type: 'SimpleSequence',
+                data: [
+                  {
+                                    "data": {
+                                      "dur": {
+                                        "denominator": 4,
+                                        "numerator": 1,
+                                        "type": "span"
+                                      },
+                                      "pitches": [
+                                        [
+                                          0,
+                                          3,
+                                          0
+                                        ]
+                                      ]
+                                    },
+                                    "type": "Note"
+                                  }
+                ]
+              }
+            ]
+          }
+        }
+      }]);
+
+      const resolved = lilypondToJMusic('var = \\relative d, { c4 }\n\\var');
+
+      console.log(resolved);
+
+    });
 
 });
