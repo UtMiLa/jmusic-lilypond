@@ -216,37 +216,199 @@ describe('Lilypond import to internal LY model', () => {
         expect(res[0].type).to.eq('VarDef');
     });
 
-    it('should parse a score', () => {
+    it('should parse a \\relative definition', () => {
+        const res = load('\\relative c\'\' { c4 d e}', { startRule: 'File' });
 
-        const score = `\\score 
+        expect(res).to.deep.eq([
             {
-              
-                \\new Staff <<
-                  
-                  \\clef treble
-        c4 d e
-          >> % End Staff = RH
+              type: 'Function',
+              data: [
+                'relative',
+                {
+                  type: 'Pitch',
+                  data: [
+                    0,
+                    5,
+                    0
+                  ]
+                },
+                {
+                  type: 'SimpleSequence',
+                  data: [
+                    {
+                      type: 'Note',
+                      data: {
+                        dur: {
+                          numerator: 1,
+                          denominator: 4,
+                          type: 'span'
+                        },
+                        pitches: [
+                          [
+                            0,
+                            3,
+                            0
+                          ]
+                        ]
+                      }
+                    },
+                    {
+                      type: 'Note',
+                      data: {
+                        dur: {
+                          numerator: 1,
+                          denominator: 4,
+                          type: 'span'
+                        },
+                        pitches: [
+                          [
+                            1,
+                            3,
+                            0
+                          ]
+                        ]
+                      }
+                    },
+                    {
+                      type: 'Note',
+                      data: {
+                        dur: {
+                          numerator: 1,
+                          denominator: 4,
+                          type: 'span'
+                        },
+                        pitches: [
+                          [
+                            2,
+                            3,
+                            0
+                          ]
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]);
 
-                  }  `;
+    });
+
+    describe('Scores', () => {
+        it('should parse a score', () => {
+
+            const score = `\\score 
+                {
+                
+                    \\new Staff <<
+                    
+                    \\clef treble
+            c4 d e
+            >> % End Staff = RH
+
+                    }  `;
 
 
-        const res = load(score, { startRule: 'File' }) as FileItemLy[];
+            const res = load(score, { startRule: 'File' }) as FileItemLy[];
 
-        expect(res).to.have.length(1);
+            expect(res).to.have.length(1);
 
-        const sc = res[0];
-        expect(sc.type).to.eq('Score');
+            const sc = res[0];
+            expect(sc.type).to.eq('Score');
 
-        const sts = (sc as ScoreDefLy).data.staves;
-        expect(sts).to.have.length(1);
+            const sts = (sc as ScoreDefLy).data.staves;
+            expect(sts).to.have.length(1);
 
-        const st = sts[0];
-        expect(st.type).to.eq('Staff');
-        expect(st.data).to.have.length(4);
+            const st = sts[0];
+            expect(st.type).to.eq('Staff');
+            expect(st.data).to.have.length(4);
 
-        expect(st.data[1]).to.deep.eq({
-            "type": "Note",
-            "data": {
+            expect(st.data[1]).to.deep.eq({
+                "type": "Note",
+                "data": {
+                    "dur": {
+                        "numerator": 1,
+                        "denominator": 4,
+                        "type": "span"
+                    },
+                    "pitches": [
+                        [
+                            0,
+                            3,
+                            0
+                        ]
+                    ]
+                }
+            });
+
+
+            const score1 = `\\score { % Start score
+                <<
+                \\new PianoStaff <<  % Start pianostaff
+                    \\new Staff <<  % Start Staff = RH
+                    \\global
+                    \\clef "treble"
+            
+        \\new Voice = "MusicA" << \\Timeline \\voiceOne \\MusicA >> % End Voice = "MusicA"
+        \\new Voice = "MusicB" << \\Timeline \\voiceTwo \\MusicB >> % End Voice = "MusicB"
+            >>  % End Staff = RH
+            \\new Staff <<  % Start Staff = LH
+                \\global
+                \\clef "bass"
+            
+        \\new Voice = "MusicC" << \\Timeline \\voiceOne \\MusicC >> % End Voice = "MusicC"
+        \\new Voice = "MusicD" << \\Timeline \\voiceTwo \\MusicD >> % End Voice = "MusicD"
+                    >>  % End Staff = LH
+                >>  % End pianostaff
+                >>
+            }  % End score`;
+
+
+
+        });
+
+        it('should parse a score with staves and voices', () => {
+
+            const score1 = `\\score { % Start score
+                <<
+                \\new PianoStaff <<  % Start pianostaff
+                    \\new Staff <<  % Start Staff = RH
+                    \\global
+                    \\clef "treble"
+            
+        \\new Voice = "MusicA" << \\Timeline \\voiceOne \\MusicA >> % End Voice = "MusicA"
+        \\new Voice = "MusicB" << \\Timeline \\voiceTwo \\MusicB >> % End Voice = "MusicB"
+            >>  % End Staff = RH
+            \\new Staff <<  % Start Staff = LH
+                \\global
+                \\clef "bass"
+            
+        \\new Voice = "MusicC" << \\Timeline \\voiceOne \\MusicC >> % End Voice = "MusicC"
+        \\new Voice = "MusicD" << \\Timeline \\voiceTwo \\MusicD >> % End Voice = "MusicD"
+                    >>  % End Staff = LH
+                >>  % End pianostaff
+                >>
+            }`;
+
+
+
+            const res = load(score1, { startRule: 'File' }) as any[];
+
+            expect(res).to.have.length(1);
+
+            const sc = res[0];
+            expect(sc.type).to.eq('Score');
+
+            /*const sts = sc.data.staves;
+            expect(sts).to.have.length(2);
+            
+            const st = sts[0];
+            expect(st.type).to.eq('Staff');
+            expect(st.data).to.have.length(4);
+
+            /*expect(st.data[1]).to.deep.eq({
+                "type": "Note",
+                "data": {
                 "dur": {
                     "numerator": 1,
                     "denominator": 4,
@@ -259,95 +421,13 @@ describe('Lilypond import to internal LY model', () => {
                         0
                     ]
                 ]
-            }
+                }
+            });
+            
+            */
+
+
         });
 
-
-        const score1 = `\\score { % Start score
-            <<
-              \\new PianoStaff <<  % Start pianostaff
-                \\new Staff <<  % Start Staff = RH
-                  \\global
-                  \\clef "treble"
-        
-      \\new Voice = "MusicA" << \\Timeline \\voiceOne \\MusicA >> % End Voice = "MusicA"
-      \\new Voice = "MusicB" << \\Timeline \\voiceTwo \\MusicB >> % End Voice = "MusicB"
-          >>  % End Staff = RH
-          \\new Staff <<  % Start Staff = LH
-            \\global
-            \\clef "bass"
-        
-      \\new Voice = "MusicC" << \\Timeline \\voiceOne \\MusicC >> % End Voice = "MusicC"
-      \\new Voice = "MusicD" << \\Timeline \\voiceTwo \\MusicD >> % End Voice = "MusicD"
-                >>  % End Staff = LH
-              >>  % End pianostaff
-            >>
-          }  % End score`;
-
-
-
     });
-
-    it('should parse a score with staves and voices', () => {
-
-        const score1 = `\\score { % Start score
-            <<
-              \\new PianoStaff <<  % Start pianostaff
-                \\new Staff <<  % Start Staff = RH
-                  \\global
-                  \\clef "treble"
-        
-      \\new Voice = "MusicA" << \\Timeline \\voiceOne \\MusicA >> % End Voice = "MusicA"
-      \\new Voice = "MusicB" << \\Timeline \\voiceTwo \\MusicB >> % End Voice = "MusicB"
-          >>  % End Staff = RH
-          \\new Staff <<  % Start Staff = LH
-            \\global
-            \\clef "bass"
-        
-      \\new Voice = "MusicC" << \\Timeline \\voiceOne \\MusicC >> % End Voice = "MusicC"
-      \\new Voice = "MusicD" << \\Timeline \\voiceTwo \\MusicD >> % End Voice = "MusicD"
-                >>  % End Staff = LH
-              >>  % End pianostaff
-            >>
-          }`;
-
-
-
-        const res = load(score1, { startRule: 'File' }) as any[];
-
-        expect(res).to.have.length(1);
-
-        const sc = res[0];
-        expect(sc.type).to.eq('Score');
-
-        /*const sts = sc.data.staves;
-        expect(sts).to.have.length(2);
-        
-        const st = sts[0];
-        expect(st.type).to.eq('Staff');
-        expect(st.data).to.have.length(4);
-
-        /*expect(st.data[1]).to.deep.eq({
-            "type": "Note",
-            "data": {
-               "dur": {
-                  "numerator": 1,
-                  "denominator": 4,
-                  "type": "span"
-               },
-               "pitches": [
-                  [
-                     0,
-                     3,
-                     0
-                  ]
-               ]
-            }
-         });
-        
-         */
-
-
-    });
-
 });
