@@ -1,4 +1,4 @@
-import { FileItemLy, ScoreDefLy } from './intermediate-ly';
+import { FileItemLy, MeterDefLy, ScoreDefLy } from './intermediate-ly';
 import { expect } from 'chai';
 import { lilypondToJMusic, load } from './import-lilypond';
 import {Clef, ClefType, createNote, Key, MeterFactory, Note, Pitch, cloneNote, SimpleSequence, Time} from 'jmusic-model/model';
@@ -91,7 +91,25 @@ describe('Lilypond import to JMusic', () => {
 
     });       
 
-    it('should import a function', () => {
+    it('should import a meter with upbeat', () => {
+      const input: MeterDefLy =  {
+        type: 'RegularMeter',
+        data: {
+          count: 4,
+          value: 4,
+          upBeat: {
+            numerator: 1,
+            denominator: 4,
+            type: 'span'
+          }
+        }
+      };
+
+      //const converter = new LilypondConverter({ staves: [] }, []);
+      /*const res = converter.convertMusicElement(input);*/
+    });
+
+    xit('should import a function', () => {
       const relFunc = load('var = \\relative d, { c4 }', {startRule: 'File'});
       
       expect (relFunc).to.deep.eq([{

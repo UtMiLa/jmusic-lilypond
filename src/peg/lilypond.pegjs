@@ -20,7 +20,7 @@ variable
 		const [count, value] = tokens[1].split('/');
         
         if (pm) {
-        	return { count: +count, value: +value, upbeat: timeFromLilypond(pm) };
+        	return { count: +count, value: +value, upBeat: timeFromLilypond(pm) };
         }
 
 		return { count: +count, value: +value };
@@ -278,8 +278,11 @@ PianoStaffExpression
 
 Relative "relative_music"
 	= rel:"\\relative" _ s:Pitch __ m: Music {
-  	return { type: "Function", data: ["relative", s, m] };
-    }	
+		return { type: "Function", data: ["relative", s, m] };
+		}
+    / rel:"\\relative" _ m: Music {
+		return { type: "Function", data: ["relative", null, m] };
+		}
 RepeatFunction
 	= "\\repeat" _ "unfold" _ no:[0-9]+ _ MusicParam __ {return {"t": "repeat"}; }
 Rest
@@ -362,9 +365,9 @@ TransposeFunction
     
 VariableDef
   = v:Identifier __ '=' __ "{" __ LyricMode __ "}"
-  / v:Identifier _ '=' _ s:SequenceOrCall { return { type: 'VarDef', data: { identifier: v, value: s } }}
-  / v:Identifier _ '=' _ "\\" v2:Identifier { return { type: 'VarDef', data: { identifier: v, variable: v2 } }}
-  / v:Identifier _ '=' _ NotYetSupported { return { type: 'Metadata' }; }
+  / v:Identifier __ '=' _ s:SequenceOrCall { return { type: 'VarDef', data: { identifier: v, value: s } }}
+  / v:Identifier __ '=' _ "\\" v2:Identifier { return { type: 'VarDef', data: { identifier: v, variable: v2 } }}
+  / v:Identifier __ '=' _ NotYetSupported { return { type: 'Metadata' }; }
 VariableRef
 	= "\\" name:[a-zA-Z]+ __ { return { type: "Variable", data: {name: name.join('')}}; }
 Version

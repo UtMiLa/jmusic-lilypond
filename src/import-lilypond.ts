@@ -1,4 +1,4 @@
-import { Alteration, BaseSequence, Clef, ClefDef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef, createNote } from 'jmusic-model/model';
+import { Alteration, BaseSequence, Clef, ClefDef, ClefType, CompositeSequence, FlexibleSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef, createNote, voiceSequenceToDef } from 'jmusic-model/model';
 import { StateChange } from 'jmusic-model/model/states/state';
 import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy, SimpleSequenceDefLy, StaffThingLy, ClefDefLy } from './intermediate-ly';
 import {parse} from './peg/lilypond';
@@ -109,14 +109,14 @@ class LilypondConverter {
 	}
 
 	convertSimpleSequence(seqIn: SequenceDefLy): ISequence {
-		const res = new SimpleSequence('');
+		const res = new FlexibleSequence('');
 		seqIn.data.forEach(seqElm => {
 			switch (seqElm.type) {
 				case 'Clef': 
 				case 'Key': 
 				case 'RegularMeter':
 				case 'Note': 
-					res.addElement(this.convertMusicElement(seqElm));
+					res.appendElements([this.convertMusicElement(seqElm)]);
 					break;
 				/*case 'Function': 
 					console.log('Resolving function: ', seqElm);				
@@ -128,7 +128,7 @@ class LilypondConverter {
 					const resolved = this.resolveVariable(seqElm);
 					if (resolved.data.value.type === 'SimpleSequence') {
 						const varSeq = this.convertSimpleSequence(resolved.data.value);
-						varSeq.elements.forEach(elm => res.addElement(elm));
+						varSeq.elements.forEach(elm => res.appendElements([elm]));
 					/*} else if (resolved.data.value.type === 'Function') {
 
 						const funcSeq = this.convertSimpleSequence((resolved.data.value.data as any)[2]);
@@ -146,7 +146,7 @@ class LilypondConverter {
 					
 					const internalSequence = this.convertSimpleSequence(seqElm as SimpleSequenceDefLy); 
 					
-					internalSequence.elements.forEach(elm => res.addElement(elm));
+					internalSequence.elements.forEach(elm => res.appendElements([elm]));
 				}
 					break;		
 				case 'Command': case 'Metadata': {
@@ -172,17 +172,17 @@ class LilypondConverter {
 		if (voiceIn.data.content.type === 'SimpleSequence') {
 			if (initialSequence) {
 				return {
-					content: new CompositeSequence(initialSequence, this.convertSimpleSequence(voiceIn.data.content)),
+					contentDef: voiceSequenceToDef(new CompositeSequence(initialSequence, this.convertSimpleSequence(voiceIn.data.content))),
 					noteDirection: voiceNo % 2 ? NoteDirection.Up : NoteDirection.Down
 				};
 			}
 			return {
-				content: this.convertSimpleSequence(voiceIn.data.content),
+				contentDef: voiceSequenceToDef(this.convertSimpleSequence(voiceIn.data.content)),
 				noteDirection: voiceNo % 2 ? NoteDirection.Up : NoteDirection.Down
 			};
 		}
 		return {
-			content: new SimpleSequence("c'4 d'4 e'4 f'4"),
+			contentDef: voiceSequenceToDef(new FlexibleSequence("c'4 d'4 e'4 f'4")),
 			noteDirection: voiceNo % 2 ? NoteDirection.Up : NoteDirection.Down
 		};
 	}
@@ -191,7 +191,7 @@ class LilypondConverter {
 		console.log(staffIn);
 		const initialSequence = new SimpleSequence('');
 		const voices = [{
-			content: initialSequence
+			contentDef: voiceSequenceToDef(initialSequence)
 		}] as VoiceDef[];
 		let voiceNo = 0;
 		staffIn.data.forEach(staffThing => {
