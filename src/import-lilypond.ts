@@ -1,4 +1,4 @@
-import { Alteration, BaseSequence, Clef, ClefDef, ClefType, CompositeSequence, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef, createNote } from 'jmusic-model/model';
+import { Alteration, BaseSequence, Clef, ClefDef, ClefType, CompositeSequence, DiatonicKey, ISequence, Key, Meter, MeterFactory, Note, NoteDirection, Pitch, ScoreDef, SequenceDef, SimpleSequence, StaffDef, Time, VoiceDef, createNote } from 'jmusic-model/model';
 import { StateChange } from 'jmusic-model/model/states/state';
 import { MusicElementDefLy, PitchDefLy, FileItemLy, ScoreDefLy, VarDefLy, StaffDefLy, VoiceDefLy, SequenceDefLy, VariableDefLy, ShortPitchDefLy, SimpleSequenceDefLy, StaffThingLy, ClefDefLy } from './intermediate-ly';
 import {parse} from './peg/lilypond';
@@ -89,7 +89,7 @@ class LilypondConverter {
 				return { 
 					isState: true, 
 					duration: Time.NoTime, 
-					key: Key.fromMode(this.convertPitch(seqElm.data.pitch).pitchClass, seqElm.data.mode.replace('\\', ''))
+					key: DiatonicKey.fromMode(this.convertPitch(seqElm.data.pitch).pitchClass, seqElm.data.mode.replace('\\', ''))
 				} as StateChange;
 				
 
@@ -172,17 +172,17 @@ class LilypondConverter {
 		if (voiceIn.data.content.type === 'SimpleSequence') {
 			if (initialSequence) {
 				return {
-					content: new CompositeSequence(initialSequence, this.convertSimpleSequence(voiceIn.data.content)),
+					contentDef: new CompositeSequence(initialSequence, this.convertSimpleSequence(voiceIn.data.content)).asObject,
 					noteDirection: voiceNo % 2 ? NoteDirection.Up : NoteDirection.Down
 				};
 			}
 			return {
-				content: this.convertSimpleSequence(voiceIn.data.content),
+				contentDef: this.convertSimpleSequence(voiceIn.data.content).asObject,
 				noteDirection: voiceNo % 2 ? NoteDirection.Up : NoteDirection.Down
 			};
 		}
 		return {
-			content: new SimpleSequence("c'4 d'4 e'4 f'4"),
+			contentDef: new SimpleSequence("c'4 d'4 e'4 f'4").asObject,
 			noteDirection: voiceNo % 2 ? NoteDirection.Up : NoteDirection.Down
 		};
 	}
@@ -191,7 +191,7 @@ class LilypondConverter {
 		console.log(staffIn);
 		const initialSequence = new SimpleSequence('');
 		const voices = [{
-			content: initialSequence
+			contentDef: initialSequence.asObject
 		}] as VoiceDef[];
 		let voiceNo = 0;
 		staffIn.data.forEach(staffThing => {

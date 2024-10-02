@@ -24,7 +24,7 @@
     "url": "https://github.com/UtMiLa/jmusic-lilypond/issues"
   },
   "dependencies": {
-    "jmusic-model": "file:../jmusic-model/dist",
+    "jmusic-model": "^0.0.6",
     "node": "^15.3.0",
     "peggy": "^3.0.2"
   },
